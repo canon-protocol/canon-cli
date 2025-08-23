@@ -44,7 +44,10 @@ pub async fn run_init(force: bool) -> CanonResult<()> {
         println!("  • {}", style(dep).cyan());
     }
     println!();
-    println!("Run {} to fetch dependencies", style("canon install").yellow());
+    println!(
+        "Run {} to fetch dependencies",
+        style("canon install").yellow()
+    );
 
     Ok(())
 }
@@ -52,7 +55,7 @@ pub async fn run_init(force: bool) -> CanonResult<()> {
 fn add_to_gitignore(dir: &std::path::Path) -> CanonResult<()> {
     let gitignore_path = dir.join(".gitignore");
     let canon_entry = ".canon/";
-    
+
     if gitignore_path.exists() {
         let content = fs::read_to_string(&gitignore_path).map_err(CanonError::Io)?;
         if !content.contains(canon_entry) {
@@ -66,6 +69,6 @@ fn add_to_gitignore(dir: &std::path::Path) -> CanonResult<()> {
     } else {
         fs::write(&gitignore_path, format!("{}\n", canon_entry)).map_err(CanonError::Io)?;
     }
-    
+
     Ok(())
 }

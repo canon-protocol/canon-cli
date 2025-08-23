@@ -12,7 +12,7 @@ pub async fn run_install() -> CanonResult<()> {
     })?;
 
     let canon_yml_path = current_dir.join("canon.yml");
-    
+
     // Check if canon.yml exists
     if !canon_yml_path.exists() {
         return Err(CanonError::Command {
@@ -22,11 +22,10 @@ pub async fn run_install() -> CanonResult<()> {
 
     // Read canon.yml
     let yaml_content = fs::read_to_string(&canon_yml_path).map_err(CanonError::Io)?;
-    let repo: CanonRepository = serde_yaml::from_str(&yaml_content).map_err(|e| {
-        CanonError::Config {
+    let repo: CanonRepository =
+        serde_yaml::from_str(&yaml_content).map_err(|e| CanonError::Config {
             message: format!("Failed to parse canon.yml: {}", e),
-        }
-    })?;
+        })?;
 
     // Create .canon directory if it doesn't exist
     let canon_dir = current_dir.join(".canon");
@@ -37,7 +36,8 @@ pub async fn run_install() -> CanonResult<()> {
     // Extract registry domain from URL
     let registry_domain = extract_domain(&repo.registry.default)?;
 
-    println!("{} dependencies from {}", 
+    println!(
+        "{} dependencies from {}",
         style("Installing").green().bold(),
         style(&repo.registry.default).cyan()
     );
@@ -107,7 +107,7 @@ async fn install_dependency(
     registry_domain: &str,
 ) -> CanonResult<()> {
     let local_path = dep.local_path(registry_domain);
-    
+
     // Create parent directories
     if let Some(parent) = local_path.parent() {
         fs::create_dir_all(parent).map_err(CanonError::Io)?;
@@ -115,20 +115,20 @@ async fn install_dependency(
 
     // Construct URLs for files to fetch
     let base_url = dep.registry_url(registry_base);
-    
+
     // Create progress bar
     let pb = ProgressBar::new_spinner();
     pb.set_style(
         ProgressStyle::default_spinner()
             .template("    {spinner:.green} Fetching {msg}")
-            .unwrap()
+            .unwrap(),
     );
     pb.set_message(format!("{}/{}", dep.publisher, dep.name));
 
     // Fetch canon.yml
     let canon_yml_url = format!("{}canon.yml", base_url);
     let canon_yml_content = fetch_file(&canon_yml_url).await?;
-    
+
     // Fetch canon-manifest.yml
     let manifest_url = format!("{}canon-manifest.yml", base_url);
     let manifest_content = fetch_file(&manifest_url).await.ok(); // Optional file
@@ -137,10 +137,10 @@ async fn install_dependency(
 
     // Create local directory and save files
     fs::create_dir_all(&local_path).map_err(CanonError::Io)?;
-    
+
     let canon_yml_path = local_path.join("canon.yml");
     fs::write(canon_yml_path, canon_yml_content).map_err(CanonError::Io)?;
-    
+
     if let Some(manifest) = manifest_content {
         let manifest_path = local_path.join("canon-manifest.yml");
         fs::write(manifest_path, manifest).map_err(CanonError::Io)?;
@@ -156,11 +156,7 @@ async fn fetch_file(url: &str) -> CanonResult<String> {
         .build()
         .map_err(CanonError::Http)?;
 
-    let response = client
-        .get(url)
-        .send()
-        .await
-        .map_err(CanonError::Http)?;
+    let response = client.get(url).send().await.map_err(CanonError::Http)?;
 
     if !response.status().is_success() {
         return Err(CanonError::RegistryError {
@@ -176,10 +172,11 @@ fn extract_domain(url_str: &str) -> CanonResult<String> {
     let url = Url::parse(url_str).map_err(|e| CanonError::Config {
         message: format!("Invalid registry URL: {}", e),
     })?;
-    
+
     url.host_str()
         .map(|h| h.to_string())
         .ok_or_else(|| CanonError::Config {
             message: "Registry URL must have a host".to_string(),
         })
 }
+

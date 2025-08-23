@@ -9,7 +9,7 @@ pub async fn run_add(uri: &str) -> CanonResult<()> {
     })?;
 
     let canon_yml_path = current_dir.join("canon.yml");
-    
+
     // Check if canon.yml exists
     if !canon_yml_path.exists() {
         return Err(CanonError::Command {
@@ -22,15 +22,15 @@ pub async fn run_add(uri: &str) -> CanonResult<()> {
 
     // Read canon.yml
     let yaml_content = fs::read_to_string(&canon_yml_path).map_err(CanonError::Io)?;
-    let mut repo: CanonRepository = serde_yaml::from_str(&yaml_content).map_err(|e| {
-        CanonError::Config {
+    let mut repo: CanonRepository =
+        serde_yaml::from_str(&yaml_content).map_err(|e| CanonError::Config {
             message: format!("Failed to parse canon.yml: {}", e),
-        }
-    })?;
+        })?;
 
     // Check if dependency already exists
     if repo.dependencies.contains(&uri.to_string()) {
-        println!("{} {} already exists in canon.yml", 
+        println!(
+            "{} {} already exists in canon.yml",
             style("Dependency").yellow(),
             style(uri).cyan()
         );
@@ -44,12 +44,14 @@ pub async fn run_add(uri: &str) -> CanonResult<()> {
     let yaml_content = serde_yaml::to_string(&repo).map_err(CanonError::Serialization)?;
     fs::write(&canon_yml_path, yaml_content).map_err(CanonError::Io)?;
 
-    println!("{} {} to canon.yml", 
+    println!(
+        "{} {} to canon.yml",
         style("Added").green().bold(),
         style(uri).cyan()
     );
     println!();
-    println!("Running {} to fetch the new dependency...", 
+    println!(
+        "Running {} to fetch the new dependency...",
         style("canon install").yellow()
     );
     println!();
@@ -59,3 +61,4 @@ pub async fn run_add(uri: &str) -> CanonResult<()> {
 
     Ok(())
 }
+
