@@ -1,6 +1,6 @@
 [package]
 name = "canon-cli"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 authors = ["Paul Fryer <https://github.com/paulfryer>"]
 description = "Command-line tool for Canon protocol specifications"
