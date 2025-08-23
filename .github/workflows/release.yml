@@ -1,0 +1,256 @@
+name: Release
+
+# This workflow uses Trusted Publishing for crates.io
+# To set up:
+# 1. Go to crates.io → Your crate → Settings → Trusted Publishing
+# 2. Add configuration:
+#    - Repository owner: canon-protocol
+#    - Repository name: canon-cli
+#    - Workflow filename: release.yml
+#    - Environment: (leave empty or use "release" if you want environment protection)
+# 3. Remove CARGO_REGISTRY_TOKEN from GitHub secrets (no longer needed!)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v0.1.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux targets
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: canon-linux-x64
+            
+          # ARM64 Linux disabled for now - OpenSSL cross-compilation issues
+          # To re-enable: uncomment below and switch reqwest to use rustls-tls
+          # - target: aarch64-unknown-linux-gnu
+          #   os: ubuntu-latest
+          #   name: canon-linux-arm64
+          #   cross: true
+            
+          # macOS targets
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: canon-macos-intel
+            
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: canon-macos-apple
+            
+          # Windows targets
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: canon-windows.exe
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+          
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          
+      # Cross-compilation steps removed - not needed without ARM64 Linux
+      # To re-enable: uncomment these when adding back ARM64 Linux support
+      
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.target }}
+        
+      - name: Strip binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: strip target/${{ matrix.target }}/release/canon
+        
+      # Windows code signing step removed - not configured yet
+      # To add later when certificate is available
+      
+      - name: Prepare binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp target/${{ matrix.target }}/release/canon.exe ${{ matrix.name }}
+          else
+            cp target/${{ matrix.target }}/release/canon ${{ matrix.name }}
+          fi
+          
+      - name: Generate SHA256 checksum
+        shell: bash
+        run: |
+          if command -v sha256sum > /dev/null; then
+            sha256sum ${{ matrix.name }} > ${{ matrix.name }}.sha256
+          elif command -v shasum > /dev/null; then
+            shasum -a 256 ${{ matrix.name }} > ${{ matrix.name }}.sha256
+          else
+            echo "No checksum tool available"
+          fi
+        
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            ${{ matrix.name }}
+            ${{ matrix.name }}.sha256
+
+  # Publish to crates.io (only for stable releases)
+  publish-crate:
+    name: Publish to Crates.io
+    runs-on: ubuntu-latest
+    # Optional: Use GitHub environment for additional protection
+    # environment: release
+    permissions:
+      id-token: write  # Required for OIDC token exchange with crates.io
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Determine if should publish
+        id: should-publish
+        run: |
+          # Use inputs.tag when workflow_dispatch, otherwise github.ref_name
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "Checking tag: $TAG"
+          # Only publish if it's a stable release (no pre-release suffix)
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "publish=true" >> $GITHUB_OUTPUT
+            echo "Publishing to crates.io: $TAG"
+          else
+            echo "publish=false" >> $GITHUB_OUTPUT
+            echo "Skipping crates.io publish for pre-release: $TAG"
+          fi
+      
+      - name: Authenticate with crates.io
+        if: steps.should-publish.outputs.publish == 'true'
+        uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+      
+      - name: Publish to crates.io
+        if: steps.should-publish.outputs.publish == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish
+
+  release:
+    name: Create Release
+    needs: [build, publish-crate]
+    # Continue even if publish-crate fails/skips
+    if: always() && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+        
+      - name: Determine if prerelease
+        id: prerelease
+        run: |
+          # Use inputs.tag when workflow_dispatch, otherwise github.ref_name
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          if [[ "$TAG" =~ -alpha\.|-.+\. ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+            echo "This is a pre-release: $TAG"
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "This is a stable release: $TAG"
+          fi
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: Canon CLI ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          files: artifacts/*
+          prerelease: ${{ steps.prerelease.outputs.prerelease }}
+          generate_release_notes: true
+          body: |
+            ## Canon Protocol CLI Release
+            
+            ### Installation
+            
+            #### Recommended: Install from Crates.io
+            ```bash
+            cargo install canon-cli
+            ```
+            
+            #### Alternative: Download Pre-built Binaries
+            
+            **Linux (x64):**
+            ```bash
+            wget https://github.com/canon-protocol/canon-cli/releases/download/${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}/canon-linux-x64
+            chmod +x canon-linux-x64
+            sudo mv canon-linux-x64 /usr/local/bin/canon
+            ```
+            
+            **macOS (Intel):**
+            ```bash
+            wget https://github.com/canon-protocol/canon-cli/releases/download/${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}/canon-macos-intel
+            chmod +x canon-macos-intel
+            sudo mv canon-macos-intel /usr/local/bin/canon
+            ```
+            
+            **macOS (Apple Silicon):**
+            ```bash
+            wget https://github.com/canon-protocol/canon-cli/releases/download/${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}/canon-macos-apple
+            chmod +x canon-macos-apple
+            sudo mv canon-macos-apple /usr/local/bin/canon
+            ```
+            
+            **Windows:**
+            ```cmd
+            # Download canon-windows.exe and run:
+            # Note: Windows may show a SmartScreen warning for unsigned executables
+            # Click "More info" → "Run anyway" to proceed safely
+            canon-windows.exe --version
+            ```
+            
+            ⚠️ **Windows Security Note:** You may see a SmartScreen warning because the executable is not code-signed. This is normal for open-source software. The binary is safe - see [WINDOWS-SECURITY.md](https://github.com/canon-protocol/canon-cli/blob/main/docs/WINDOWS-SECURITY.md) for bypass instructions.
+            
+            ### Verify Installation
+            ```bash
+            canon --version
+            ```
+            
+            ### Usage
+            ```bash
+            canon init my-project
+            canon --help
+            ```
