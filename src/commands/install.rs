@@ -3,7 +3,6 @@ use crate::utils::{CanonError, CanonResult};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::fs;
-use std::path::Path;
 use url::Url;
 
 pub async fn run_install() -> CanonResult<()> {
