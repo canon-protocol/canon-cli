@@ -33,4 +33,3 @@ pub struct OutputConfiguration {
     pub artifacts: Option<Vec<String>>,
     pub directory: Option<String>,
 }
-
