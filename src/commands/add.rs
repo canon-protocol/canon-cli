@@ -61,4 +61,3 @@ pub async fn run_add(uri: &str) -> CanonResult<()> {
 
     Ok(())
 }
-

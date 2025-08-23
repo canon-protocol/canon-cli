@@ -179,4 +179,3 @@ fn extract_domain(url_str: &str) -> CanonResult<String> {
             message: "Registry URL must have a host".to_string(),
         })
 }
-

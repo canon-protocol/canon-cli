@@ -69,4 +69,3 @@ impl Dependency {
         self.local_path(registry_domain).exists()
     }
 }
-
