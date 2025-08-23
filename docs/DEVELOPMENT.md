@@ -75,7 +75,7 @@ just test-init
 # Or manually
 cargo run -- init test-project --author "Test User"
 cd test-project && ls -la
-# Should see: canon.yml, sources/, .canonignore
+# Should see: canon.yml, sources/
 ```
 
 ### Full Test Suite

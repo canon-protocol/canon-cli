@@ -29,18 +29,24 @@ canon-cli/
 
 ## Current Status
 
-- ✅ `canon init` - Create new Canon specifications
+- ✅ `canon init` - Initialize Canon repository with core dependencies
+- ✅ `canon install` - Install dependencies from registry
+- ✅ `canon add` - Add new dependencies to canon.yml
+- ✅ Dependency management system
 - ✅ Basic CLI structure and error handling
 - ⏳ Additional commands in development
 
 ## Usage
 
 ```bash
-# Initialize a new Canon specification
-canon init my-spec --author "Your Name" --license MIT
+# Initialize a new Canon repository with core dependencies
+canon init
 
-# Initialize with template (when implemented)
-canon init --template api-spec
+# Install dependencies from canon.yml
+canon install
+
+# Add a new dependency
+canon add "api.io/openapi@2.0.0"
 
 # Other commands (stubs for now)
 canon validate

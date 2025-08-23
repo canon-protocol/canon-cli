@@ -241,7 +241,7 @@ just test-init
 
 # Or manually
 cargo run -- init test-project --author "Your Name"
-ls test-project/              # Should show canon.yml, sources/, .canonignore
+ls test-project/              # Should show canon.yml, sources/
 ```
 
 ## Cross-Platform Building

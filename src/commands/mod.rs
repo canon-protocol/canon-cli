@@ -1,7 +1,9 @@
+pub mod add;
 pub mod build;
 pub mod clean;
 pub mod config;
 pub mod init;
+pub mod install;
 pub mod validate;
 
 use crate::cli::{Commands, ConfigCommands};
@@ -9,14 +11,9 @@ use crate::utils::CanonResult;
 
 pub async fn handle_command(command: Commands) -> CanonResult<()> {
     match command {
-        Commands::Init {
-            name,
-            r#type,
-            author,
-            license,
-            template,
-            force,
-        } => init::run_init(name, r#type, author, license, template, force).await,
+        Commands::Init { force } => init::run_init(force).await,
+        Commands::Install => install::run_install().await,
+        Commands::Add { uri } => add::run_add(&uri).await,
         Commands::Validate {
             path,
             strict,

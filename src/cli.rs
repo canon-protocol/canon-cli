@@ -29,30 +29,20 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Initialize new specification
+    /// Initialize new Canon repository with core dependencies
     Init {
-        /// Specification name (defaults to current directory name)
-        name: Option<String>,
-
-        /// Specification type URI
-        #[arg(long, default_value = "canon-protocol.org/specification@1.0.0")]
-        r#type: String,
-
-        /// Author name (default: git config user.name)
-        #[arg(long)]
-        author: Option<String>,
-
-        /// License identifier
-        #[arg(long)]
-        license: Option<String>,
-
-        /// Use specification template
-        #[arg(long)]
-        template: Option<String>,
-
         /// Overwrite existing canon.yml
         #[arg(long)]
         force: bool,
+    },
+
+    /// Install dependencies from canon.yml
+    Install,
+
+    /// Add a new dependency to canon.yml
+    Add {
+        /// Dependency URI (e.g., "api.io/openapi@2.0.0")
+        uri: String,
     },
 
     /// Validate specification syntax and structure
