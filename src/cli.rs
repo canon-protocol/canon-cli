@@ -95,7 +95,7 @@ pub enum Commands {
         /// Remove all cached data (.canon/ directory)
         #[arg(long)]
         all: bool,
-        
+
         /// Remove everything including canon.yml (complete uninstall)
         #[arg(long)]
         purge: bool,
