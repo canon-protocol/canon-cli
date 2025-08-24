@@ -28,7 +28,7 @@ pub async fn handle_command(command: Commands) -> CanonResult<()> {
             no_cache,
             parallel,
         } => build::run_build(engine, output, sign, key, no_cache, parallel).await,
-        Commands::Clean => clean::run_clean().await,
+        Commands::Clean { all, purge } => clean::run_clean(all, purge).await,
         Commands::Config { command } => match command {
             ConfigCommands::Get { key } => config::get_config(&key).await,
             ConfigCommands::Set { key, value } => config::set_config(&key, &value).await,

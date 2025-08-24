@@ -90,8 +90,16 @@ pub enum Commands {
         parallel: Option<usize>,
     },
 
-    /// Remove generated artifacts
-    Clean,
+    /// Remove Canon artifacts
+    Clean {
+        /// Remove all cached data (.canon/ directory)
+        #[arg(long)]
+        all: bool,
+        
+        /// Remove everything including canon.yml (complete uninstall)
+        #[arg(long)]
+        purge: bool,
+    },
 
     /// Manage configuration
     Config {

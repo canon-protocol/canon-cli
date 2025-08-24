@@ -32,6 +32,7 @@ canon-cli/
 - ✅ `canon init` - Initialize Canon repository with core dependencies
 - ✅ `canon install` - Install dependencies from registry
 - ✅ `canon add` - Add new dependencies to canon.yml
+- ✅ `canon clean` - Remove cached specifications with various options
 - ✅ Dependency management system
 - ✅ Basic CLI structure and error handling
 - ⏳ Additional commands in development
@@ -48,10 +49,14 @@ canon install
 # Add a new dependency
 canon add "api.io/openapi@2.0.0"
 
+# Clean cached specifications
+canon clean                     # Remove .canon/specs/
+canon clean --all              # Remove entire .canon/
+canon clean --purge            # Remove .canon/ and canon.yml (complete uninstall)
+
 # Other commands (stubs for now)
 canon validate
 canon build
-canon clean
 canon config list
 ```
 

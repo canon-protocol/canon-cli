@@ -43,8 +43,8 @@ impl Dependency {
     /// Get the local storage path for this dependency
     pub fn local_path(&self, registry_domain: &str) -> PathBuf {
         let mut path = PathBuf::from(".canon");
-        path.push(registry_domain);
-        path.push("specs"); // Add specs directory to match registry structure
+        path.push("specs"); // All specs under .canon/specs/
+        path.push(registry_domain); // Then organized by registry
         path.push(&self.publisher);
         path.push(&self.name);
         if let Some(ref version) = self.version {
@@ -96,10 +96,10 @@ mod tests {
             version: Some("1.0.0".to_string()),
         };
 
-        let path = dep.local_path("registry.canon-protocol.org");
+        let path = dep.local_path("spec.farm");
         assert_eq!(
             path,
-            PathBuf::from(".canon/registry.canon-protocol.org/specs/canon-protocol.org/type/1.0.0")
+            PathBuf::from(".canon/specs/spec.farm/canon-protocol.org/type/1.0.0")
         );
     }
 
@@ -111,17 +111,17 @@ mod tests {
             version: Some("1.0.0".to_string()),
         };
 
-        let url = dep.registry_url("https://registry.canon-protocol.org");
+        let url = dep.registry_url("https://spec.farm");
         assert_eq!(
             url,
-            "https://registry.canon-protocol.org/specs/canon-protocol.org/type/1.0.0/"
+            "https://spec.farm/specs/canon-protocol.org/type/1.0.0/"
         );
 
         // Test with trailing slash
-        let url_with_slash = dep.registry_url("https://registry.canon-protocol.org/");
+        let url_with_slash = dep.registry_url("https://spec.farm/");
         assert_eq!(
             url_with_slash,
-            "https://registry.canon-protocol.org/specs/canon-protocol.org/type/1.0.0/"
+            "https://spec.farm/specs/canon-protocol.org/type/1.0.0/"
         );
     }
 
