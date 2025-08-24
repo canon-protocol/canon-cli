@@ -38,6 +38,8 @@ jobs:
   prepare-release:
     name: Prepare Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       protocol_version: ${{ steps.versions.outputs.protocol_version }}
       cli_version: ${{ steps.versions.outputs.cli_version }}
