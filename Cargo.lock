@@ -235,6 +235,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "base64 0.21.7",
+ "canon-protocol",
  "chrono",
  "clap",
  "console",
@@ -260,6 +261,21 @@ dependencies = [
  "uuid",
  "walkdir",
  "wiremock",
+]
+
+[[package]]
+name = "canon-protocol"
+version = "0.1.0"
+dependencies = [
+ "base64 0.21.7",
+ "chrono",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2",
+ "thiserror 1.0.69",
+ "url",
 ]
 
 [[package]]

@@ -1,0 +1,75 @@
+[package]
+name = "canon-cli"
+version = "0.2.2"
+edition = "2021"
+authors = ["Paul Fryer <https://github.com/paulfryer>"]
+description = "Command-line tool for Canon protocol specifications"
+license = "Apache-2.0"
+repository = "https://github.com/canon-protocol/canon-cli"
+homepage = "https://canon-protocol.org"
+keywords = ["cli", "specification", "protocol", "transformation", "documentation"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+include = [
+    "src/**/*",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE*",
+]
+
+[[bin]]
+name = "canon"
+path = "src/main.rs"
+
+[dependencies]
+# Canon protocol types
+canon-protocol = { path = "../canon-protocol" }
+
+# CLI framework
+clap = { version = "4.4", features = ["derive", "env"] }
+console = "0.15"
+indicatif = "0.17"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+toml = "0.8"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# File system
+walkdir = "2.4"
+globset = "0.4"
+ignore = "0.4"
+
+# Cryptography
+ed25519-dalek = "2.0"
+sha2 = "0.10"
+base64 = "0.21"
+
+# Template engines
+handlebars = "4.4"
+tera = "1.19"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Utilities
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "5.0"
+semver = "1.0"
+url = "2.4"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile = "3.8"
+wiremock = "0.5"
+
+[build-dependencies]
+chrono = { version = "0.4", features = ["std"] }

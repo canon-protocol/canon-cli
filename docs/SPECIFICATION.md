@@ -2,94 +2,93 @@
 
 ## Overview
 
-The Canon CLI is a command-line tool that transforms unstructured human input into structured, versioned canonical specifications. Currently in MVP phase with basic functionality implemented.
+The Canon CLI is a command-line tool for creating and managing Canon Protocol specifications. It provides the reference implementation for working with Canon specifications locally.
 
-## Current Implementation Status
+## Architecture
 
-### Working Commands
-- `canon init` - Initialize a new Canon specification with basic structure
-- `canon --help` - Display help information
-- `canon --version` - Show version information
+This repository is a Cargo workspace containing two crates:
+- `canon-protocol` - Core library with types and validation
+- `canon-cli` - Command-line interface application
 
-### Placeholder Commands (Not Yet Implemented)
-- `canon validate` - Will validate canon.yml syntax
-- `canon build` - Will generate canonical artifacts
-- `canon clean` - Will remove generated files
-- `canon config` - Will manage configuration
+## Commands
+
+### Implemented
+
+#### `canon init`
+Initialize a new Canon repository with core dependencies.
+- Creates `canon.yml` with default configuration
+- Sets up `.canon/` directory for cached specifications
+- Adds `.canon/` to `.gitignore`
+
+#### `canon install`
+Install dependencies from `canon.yml`.
+- Fetches specifications from configured registry
+- Caches them in `.canon/specs/`
+- Validates downloaded specifications
+
+#### `canon add <uri>`
+Add a new dependency to `canon.yml`.
+- Parses dependency URI (e.g., "api.io/openapi@2.0.0")
+- Updates `canon.yml` with new dependency
+- Does not automatically install (run `canon install` after)
+
+#### `canon clean [--all] [--purge]`
+Remove cached specifications.
+- Default: Removes `.canon/specs/`
+- `--all`: Removes entire `.canon/` directory
+- `--purge`: Complete uninstall (removes `.canon/` and `canon.yml`)
+
+### Planned
+
+#### `canon validate`
+Validate specification syntax and structure.
+- Check `canon.yml` format
+- Validate against Canon Protocol schema
+- Report errors and warnings
+
+#### `canon build`
+Generate canonical artifacts from sources.
+- Execute transformations
+- Generate manifest with file hashes
+- Optionally sign with Ed25519
+
+#### `canon config`
+Manage CLI configuration.
+- Set/get configuration values
+- Manage registry settings
+- Configure authentication (when needed)
 
 ## Installation
 
-### From Crates.io (Recommended)
 ```bash
+# From crates.io
 cargo install canon-cli
-```
 
-### Pre-built Binaries
-Available from [GitHub Releases](https://github.com/canon-protocol/canon-cli/releases) for:
-- Linux x64
-- macOS Intel & Apple Silicon
-- Windows x64
-
-## Project Structure
-
-```
-canon-cli/
-├── src/
-│   ├── main.rs              # Entry point
-│   ├── cli.rs               # Command-line argument parsing
-│   ├── commands/            # Command implementations
-│   ├── core/                # Core domain logic
-│   ├── config/              # Configuration management
-│   └── utils/               # Utilities and error handling
-├── Cargo.toml               # Rust package configuration
-└── README.md                # User documentation
-```
-
-## Canon Specification Format
-
-When you run `canon init`, it creates a `canon.yml` file:
-
-```yaml
-canon: 1.0
-type: canon-protocol.org/specification@1.0.0
-name: my-project
-version: 0.1.0
-
-metadata:
-  description: Project description
-  author: Your Name
-  license: MIT
-
-sources:
-  - path: sources/
-    type: general
-```
-
-## Development
-
-Built with Rust using:
-- `clap` for CLI parsing
-- `serde` for serialization
-- `tokio` for async runtime
-
-### Building from Source
-```bash
-git clone https://github.com/canon-protocol/canon-cli.git
+# From source
+git clone https://github.com/canon-protocol/canon-cli
 cd canon-cli
-cargo build --release
+cargo install --path crates/canon-cli
 ```
 
-### Running Tests
-```bash
-cargo test
-```
+## Configuration
 
-## License
+The CLI looks for configuration in this order:
+1. Command-line flags
+2. Environment variables
+3. `.canon/config.yml` (future)
+4. Global config file (future)
 
-Apache-2.0
+## Registry Interaction
 
-## Links
+Currently, the CLI interacts with registries using simple HTTP GET requests:
+- No authentication required (public specifications only)
+- Default registry: `https://spec.farm`
+- Specifications stored at: `{registry}/specs/{publisher}/{name}/{version}/`
 
-- Repository: https://github.com/canon-protocol/canon-cli
-- Homepage: https://canon-protocol.org
-- Crate: https://crates.io/crates/canon-cli
+## Future Enhancements
+
+- Transformation execution (AI-driven, template-based)
+- Cryptographic signing and verification
+- Registry authentication for private specifications
+- Local specification development workflow
+- Specification publishing to registries

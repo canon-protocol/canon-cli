@@ -23,14 +23,14 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Run tests
-        run: cargo test --verbose
+      - name: Run tests for all workspace members
+        run: cargo test --workspace --verbose
 
       - name: Check formatting
-        run: cargo fmt -- --check
+        run: cargo fmt --all -- --check
 
-      - name: Run clippy
-        run: cargo clippy -- -D warnings
+      - name: Run clippy for all workspace members
+        run: cargo clippy --workspace -- -D warnings
 
   build:
     name: Build Check
@@ -45,5 +45,14 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Build
-        run: cargo build --verbose
+      - name: Build all workspace members
+        run: cargo build --workspace --verbose
+
+      - name: Build canon-protocol library
+        run: cargo build -p canon-protocol --verbose
+
+      - name: Build canon-cli binary
+        run: cargo build -p canon-cli --verbose
+
+      - name: Check that binary runs
+        run: cargo run -p canon-cli -- --version

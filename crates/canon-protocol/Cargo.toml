@@ -1,0 +1,23 @@
+[package]
+name = "canon-protocol"
+version = "0.1.0"
+edition = "2021"
+authors = ["Paul Fryer <https://github.com/paulfryer>"]
+description = "Core types and validation for the Canon Protocol specification format"
+license = "Apache-2.0"
+repository = "https://github.com/canon-protocol/canon-cli"
+homepage = "https://canon-protocol.org"
+keywords = ["canon", "protocol", "specification", "transformation", "types"]
+categories = ["data-structures", "parser-implementations"]
+readme = "README.md"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+semver = "1.0"
+url = "2.4"
+thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+base64 = "0.21"

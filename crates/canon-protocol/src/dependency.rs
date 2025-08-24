@@ -1,4 +1,4 @@
-use crate::utils::{CanonError, CanonResult};
+use crate::error::{ProtocolError, ProtocolResult};
 use std::path::PathBuf;
 
 /// Represents a parsed dependency URI
@@ -11,16 +11,17 @@ pub struct Dependency {
 
 impl Dependency {
     /// Parse a dependency URI like "canon-protocol.org/type@1.0.0"
-    pub fn parse(uri: &str) -> CanonResult<Self> {
+    pub fn parse(uri: &str) -> ProtocolResult<Self> {
         // Split by @ to separate the path from version
         let parts: Vec<&str> = uri.splitn(2, '@').collect();
 
         // Parse the path part
         let path_parts: Vec<&str> = parts[0].split('/').collect();
         if path_parts.len() != 2 {
-            return Err(CanonError::Config {
-                message: format!("Invalid dependency URI format: {}", uri),
-            });
+            return Err(ProtocolError::InvalidUri(format!(
+                "Invalid dependency URI format: {}", 
+                uri
+            )));
         }
 
         let publisher = path_parts[0].to_string();

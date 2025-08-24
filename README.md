@@ -2,30 +2,43 @@
 
 A command-line tool for creating and managing Canon protocol specifications.
 
-## Structure
+## Project Structure
+
+This is a Cargo workspace containing two crates:
 
 ```
 canon-cli/
-├── Cargo.toml              # Project configuration and dependencies
-├── src/
-│   ├── main.rs            # Entry point
-│   ├── cli.rs             # Command-line argument parsing with clap
-│   ├── commands/          # Command implementations
-│   │   ├── mod.rs         # Command routing
-│   │   ├── init.rs        # canon init command (implemented)
-│   │   ├── validate.rs    # canon validate command (stub)
-│   │   ├── build.rs       # canon build command (stub)
-│   │   ├── clean.rs       # canon clean command (stub)
-│   │   └── config.rs      # canon config commands (stubs)
-│   ├── core/              # Core domain logic
-│   │   ├── mod.rs         # Module exports
-│   │   └── specification.rs # Canon specification data structures
-│   ├── config/            # Configuration management (placeholder)
-│   │   └── mod.rs
-│   └── utils/             # Utilities
-│       ├── mod.rs         # Module exports
-│       └── error.rs       # Error handling with thiserror
+├── Cargo.toml                    # Workspace configuration
+├── crates/
+│   ├── canon-protocol/           # Core protocol library
+│   │   ├── Cargo.toml
+│   │   ├── src/
+│   │   │   ├── lib.rs           # Library exports
+│   │   │   ├── specification.rs # Canon specification types
+│   │   │   ├── dependency.rs    # Dependency parsing
+│   │   │   ├── repository.rs    # Repository configuration
+│   │   │   ├── manifest.rs      # Manifest types
+│   │   │   ├── signature.rs     # Signature types
+│   │   │   └── error.rs         # Error types
+│   │   └── README.md
+│   │
+│   └── canon-cli/                # CLI application
+│       ├── Cargo.toml
+│       ├── src/
+│       │   ├── main.rs          # Entry point
+│       │   ├── cli.rs           # Command-line parsing
+│       │   ├── commands/        # Command implementations
+│       │   ├── config/          # Configuration management
+│       │   ├── core/            # Core re-exports
+│       │   └── utils/           # Utilities
+│       └── README.md
+└── README.md                     # This file
 ```
+
+## Crates
+
+- **`canon-protocol`** - Core library with Canon Protocol types and validation (v0.1.0)
+- **`canon-cli`** - Command-line interface tool (v0.2.2)
 
 ## Current Status
 
