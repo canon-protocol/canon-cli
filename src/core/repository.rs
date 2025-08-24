@@ -19,12 +19,11 @@ impl CanonRepository {
         Self {
             canon: "1.0".to_string(),
             registry: RegistryConfig {
-                default: "https://registry.canon-protocol.org".to_string(),
+                default: "https://spec.farm".to_string(),
             },
             dependencies: vec![
                 "canon-protocol.org/type@1.0.0".to_string(),
                 "canon-protocol.org/transformation@1.0.0".to_string(),
-                "canon-protocol.org/specification@1.0.0".to_string(),
                 "canon-protocol.org/auto-version@1.0.0".to_string(),
             ],
         }
