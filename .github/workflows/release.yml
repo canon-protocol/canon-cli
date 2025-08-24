@@ -1,151 +1,339 @@
 name: Release
 
-# This workflow uses Trusted Publishing for crates.io
-# To set up:
-# 1. Go to crates.io → Your crate → Settings → Trusted Publishing
-# 2. Add configuration:
-#    - Repository owner: canon-protocol
-#    - Repository name: canon-cli
-#    - Workflow filename: release.yml
-#    - Environment: (leave empty or use "release" if you want environment protection)
-# 3. Remove CARGO_REGISTRY_TOKEN from GitHub secrets (no longer needed!)
+# Professional release workflow for Canon CLI workspace
+# Supports independent releases of canon-protocol and canon-cli crates
+# Uses workflow_dispatch for manual control with automated version bumping
 
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Release tag (e.g., v0.1.0)'
+      crate:
+        description: 'Which crate to release'
         required: true
-        type: string
+        type: choice
+        options:
+          - canon-protocol
+          - canon-cli
+          - both
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: 'Dry run (skip actual publish)'
+        required: false
+        type: boolean
+        default: false
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
-  # Run tests before publishing
-  test:
-    name: Test Suite
+  prepare-release:
+    name: Prepare Release
     runs-on: ubuntu-latest
+    outputs:
+      protocol_version: ${{ steps.versions.outputs.protocol_version }}
+      cli_version: ${{ steps.versions.outputs.cli_version }}
+      release_protocol: ${{ steps.versions.outputs.release_protocol }}
+      release_cli: ${{ steps.versions.outputs.release_cli }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
+      - name: Install cargo-edit for version management
+        run: cargo install cargo-edit
 
-      - name: Run tests for all workspace members
-        run: cargo test --workspace --verbose
+      - name: Calculate new versions
+        id: versions
+        run: |
+          # Determine which crates to release
+          RELEASE_PROTOCOL=false
+          RELEASE_CLI=false
+          
+          if [ "${{ inputs.crate }}" = "canon-protocol" ] || [ "${{ inputs.crate }}" = "both" ]; then
+            RELEASE_PROTOCOL=true
+          fi
+          
+          if [ "${{ inputs.crate }}" = "canon-cli" ] || [ "${{ inputs.crate }}" = "both" ]; then
+            RELEASE_CLI=true
+          fi
+          
+          echo "release_protocol=$RELEASE_PROTOCOL" >> $GITHUB_OUTPUT
+          echo "release_cli=$RELEASE_CLI" >> $GITHUB_OUTPUT
+          
+          # Get current versions
+          CURRENT_PROTOCOL_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "canon-protocol") | .version')
+          CURRENT_CLI_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "canon-cli") | .version')
+          
+          echo "Current canon-protocol version: $CURRENT_PROTOCOL_VERSION"
+          echo "Current canon-cli version: $CURRENT_CLI_VERSION"
+          
+          # Bump versions for selected crates
+          if [ "$RELEASE_PROTOCOL" = "true" ]; then
+            cd crates/canon-protocol
+            cargo set-version --bump ${{ inputs.version_bump }}
+            NEW_PROTOCOL_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "canon-protocol") | .version')
+            echo "New canon-protocol version: $NEW_PROTOCOL_VERSION"
+            echo "protocol_version=$NEW_PROTOCOL_VERSION" >> $GITHUB_OUTPUT
+            cd ../..
+            
+            # Update canon-cli's dependency on canon-protocol if needed
+            if [ "$RELEASE_CLI" = "true" ]; then
+              cd crates/canon-cli
+              # Update the canon-protocol dependency to use the new version
+              sed -i "s/canon-protocol = { path = \"..\/canon-protocol\" }/canon-protocol = { version = \"$NEW_PROTOCOL_VERSION\", path = \"..\/canon-protocol\" }/" Cargo.toml
+              cd ../..
+            fi
+          else
+            echo "protocol_version=$CURRENT_PROTOCOL_VERSION" >> $GITHUB_OUTPUT
+          fi
+          
+          if [ "$RELEASE_CLI" = "true" ]; then
+            cd crates/canon-cli
+            cargo set-version --bump ${{ inputs.version_bump }}
+            NEW_CLI_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "canon-cli") | .version')
+            echo "New canon-cli version: $NEW_CLI_VERSION"
+            echo "cli_version=$NEW_CLI_VERSION" >> $GITHUB_OUTPUT
+            cd ../..
+          else
+            echo "cli_version=$CURRENT_CLI_VERSION" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+      - name: Update Cargo.lock
+        run: cargo update --workspace
 
-      - name: Run clippy
-        run: cargo clippy --workspace -- -D warnings
+      - name: Run tests with new versions
+        run: |
+          cargo test --workspace --all-features
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-features -- -D warnings
 
-  # Publish to crates.io
-  publish-crates:
-    name: Publish to Crates.io
-    needs: test
+      - name: Commit version changes
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git add -A
+          git diff --staged --quiet || git commit -m "chore: bump version(s) for release
+
+          ${{ steps.versions.outputs.release_protocol == 'true' && format('canon-protocol: {0}', steps.versions.outputs.protocol_version) || '' }}
+          ${{ steps.versions.outputs.release_cli == 'true' && format('canon-cli: {0}', steps.versions.outputs.cli_version) || '' }}"
+          
+          git push
+
+  publish-protocol:
+    name: Publish canon-protocol
+    needs: prepare-release
+    if: ${{ needs.prepare-release.outputs.release_protocol == 'true' && inputs.dry_run != true }}
     runs-on: ubuntu-latest
-    # Optional: Use GitHub environment for additional protection
-    # environment: release
     permissions:
-      id-token: write  # Required for OIDC token exchange with crates.io
+      id-token: write  # Required for trusted publishing
       contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+        with:
+          ref: main  # Get the latest with version bumps
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      
-      - name: Determine version tag
-        id: version
-        run: |
-          # Use inputs.tag when workflow_dispatch, otherwise github.ref_name
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ inputs.tag }}"
-          else
-            TAG="${{ github.ref_name }}"
-          fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          
-          # Only publish stable releases (no pre-release suffix)
-          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "is_stable=true" >> $GITHUB_OUTPUT
-            echo "Publishing stable release: $TAG"
-          else
-            echo "is_stable=false" >> $GITHUB_OUTPUT
-            echo "Pre-release detected, skipping crates.io publish: $TAG"
-          fi
-      
+
       - name: Authenticate with crates.io
-        if: steps.version.outputs.is_stable == 'true'
         uses: rust-lang/crates-io-auth-action@v1
         id: auth
-      
-      - name: Publish canon-protocol to crates.io
-        if: steps.version.outputs.is_stable == 'true'
+
+      - name: Publish canon-protocol
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: |
-          echo "Publishing canon-protocol..."
+          echo "Publishing canon-protocol v${{ needs.prepare-release.outputs.protocol_version }}..."
           cargo publish -p canon-protocol --no-verify
-          # Wait a bit for crates.io to index
-          echo "Waiting for crates.io to index canon-protocol..."
-          sleep 30
-      
-      - name: Publish canon-cli to crates.io
-        if: steps.version.outputs.is_stable == 'true'
+          
+          # Wait for crates.io to index
+          echo "Waiting for crates.io to index..."
+          for i in {1..12}; do
+            if cargo search canon-protocol --limit 1 | grep -q "^canon-protocol = \"${{ needs.prepare-release.outputs.protocol_version }}\""; then
+              echo "canon-protocol v${{ needs.prepare-release.outputs.protocol_version }} is now available on crates.io"
+              break
+            fi
+            echo "Waiting for indexing... ($i/12)"
+            sleep 10
+          done
+
+  publish-cli:
+    name: Publish canon-cli
+    needs: [prepare-release, publish-protocol]
+    # Run if CLI should be released, and either protocol wasn't released or has finished
+    if: |
+      always() &&
+      needs.prepare-release.outputs.release_cli == 'true' &&
+      inputs.dry_run != true &&
+      (needs.prepare-release.outputs.release_protocol != 'true' || needs.publish-protocol.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for trusted publishing
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main  # Get the latest with version bumps
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Authenticate with crates.io
+        uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+
+      - name: Publish canon-cli
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: |
-          echo "Publishing canon-cli..."
+          echo "Publishing canon-cli v${{ needs.prepare-release.outputs.cli_version }}..."
           cargo publish -p canon-cli --no-verify
+
+  create-release:
+    name: Create GitHub Release
+    needs: [prepare-release, publish-protocol, publish-cli]
+    if: |
+      always() &&
+      inputs.dry_run != true &&
+      (needs.publish-protocol.result == 'success' || needs.publish-protocol.result == 'skipped') &&
+      (needs.publish-cli.result == 'success' || needs.publish-cli.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          # Determine release name and tag
+          if [ "${{ needs.prepare-release.outputs.release_protocol }}" = "true" ] && [ "${{ needs.prepare-release.outputs.release_cli }}" = "true" ]; then
+            RELEASE_NAME="Canon CLI v${{ needs.prepare-release.outputs.cli_version }} & Protocol v${{ needs.prepare-release.outputs.protocol_version }}"
+            TAG="v${{ needs.prepare-release.outputs.cli_version }}"
+          elif [ "${{ needs.prepare-release.outputs.release_protocol }}" = "true" ]; then
+            RELEASE_NAME="Canon Protocol v${{ needs.prepare-release.outputs.protocol_version }}"
+            TAG="protocol-v${{ needs.prepare-release.outputs.protocol_version }}"
+          else
+            RELEASE_NAME="Canon CLI v${{ needs.prepare-release.outputs.cli_version }}"
+            TAG="v${{ needs.prepare-release.outputs.cli_version }}"
+          fi
+          
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Canon CLI ${{ steps.version.outputs.tag }}
-          prerelease: ${{ steps.version.outputs.is_stable != 'true' }}
+          tag_name: ${{ steps.notes.outputs.tag }}
+          name: ${{ steps.notes.outputs.release_name }}
           generate_release_notes: true
+          draft: false
+          prerelease: false
           body: |
-            ## Canon Protocol CLI Release
+            ## 📦 Released Crates
             
-            ### Installation
+            ${{ needs.prepare-release.outputs.release_protocol == 'true' && format('### canon-protocol v{0}', needs.prepare-release.outputs.protocol_version) || '' }}
+            ${{ needs.prepare-release.outputs.release_protocol == 'true' && '```bash
+            cargo add canon-protocol@' || '' }}${{ needs.prepare-release.outputs.release_protocol == 'true' && needs.prepare-release.outputs.protocol_version || '' }}${{ needs.prepare-release.outputs.release_protocol == 'true' && '
+            ```' || '' }}
             
-            Install from crates.io:
+            ${{ needs.prepare-release.outputs.release_cli == 'true' && format('### canon-cli v{0}', needs.prepare-release.outputs.cli_version) || '' }}
+            ${{ needs.prepare-release.outputs.release_cli == 'true' && '```bash
+            cargo install canon-cli@' || '' }}${{ needs.prepare-release.outputs.release_cli == 'true' && needs.prepare-release.outputs.cli_version || '' }}${{ needs.prepare-release.outputs.release_cli == 'true' && '
+            ```' || '' }}
+            
+            ## 🚀 Installation
+            
+            Install the Canon CLI:
             ```bash
             cargo install canon-cli
             ```
             
-            Or add the library to your project:
+            Or add the protocol library to your project:
             ```toml
             [dependencies]
-            canon-protocol = "0.1"
+            canon-protocol = "${{ needs.prepare-release.outputs.protocol_version }}"
             ```
             
-            ### Verify Installation
-            ```bash
-            canon --version
-            ```
+            ## 📝 Changelog
             
-            ### Quick Start
-            ```bash
-            # Initialize a new Canon repository
-            canon init
-            
-            # Install dependencies
-            canon install
-            
-            # Add a dependency
-            canon add "api.io/openapi@2.0.0"
-            ```
-            
-            See the [README](https://github.com/canon-protocol/canon-cli) for full documentation.
+            See below for all changes since the last release.
+
+  summary:
+    name: Release Summary
+    needs: [prepare-release, publish-protocol, publish-cli, create-release]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "### 🧪 Dry Run Mode" >> $GITHUB_STEP_SUMMARY
+            echo "No packages were actually published." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "### Version Changes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.prepare-release.outputs.release_protocol }}" = "true" ]; then
+            echo "- **canon-protocol**: v${{ needs.prepare-release.outputs.protocol_version }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.prepare-release.outputs.release_cli }}" = "true" ]; then
+            echo "- **canon-cli**: v${{ needs.prepare-release.outputs.cli_version }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.publish-protocol.result }}" = "success" ]; then
+            echo "✅ canon-protocol published successfully" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.publish-protocol.result }}" = "skipped" ]; then
+            echo "⏭️ canon-protocol publish skipped" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.publish-protocol.result }}" = "failure" ]; then
+            echo "❌ canon-protocol publish failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.publish-cli.result }}" = "success" ]; then
+            echo "✅ canon-cli published successfully" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.publish-cli.result }}" = "skipped" ]; then
+            echo "⏭️ canon-cli publish skipped" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.publish-cli.result }}" = "failure" ]; then
+            echo "❌ canon-cli publish failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.create-release.result }}" = "success" ]; then
+            echo "✅ GitHub release created" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.create-release.result }}" = "skipped" ]; then
+            echo "⏭️ GitHub release skipped" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.create-release.result }}" = "failure" ]; then
+            echo "❌ GitHub release creation failed" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -2,87 +2,213 @@
 
 ## Overview
 
-Canon CLI uses a simple, clean release process focused on publishing to crates.io. The repository contains two crates in a workspace:
-- `canon-protocol` - Core library (published first)
-- `canon-cli` - CLI application (depends on canon-protocol)
+Canon CLI uses a professional, automated release process with GitHub Actions. The repository contains two crates in a Cargo workspace that can be released independently:
 
-## GitHub Actions Workflows
+- `canon-protocol` - Core protocol library
+- `canon-cli` - Command-line interface application
 
-- **CI** - Runs tests, formatting, and clippy on every push/PR
-- **Release** - Publishes to crates.io when a version tag is pushed
+## Key Features
+
+- **Automated Version Bumping**: No manual Cargo.toml edits required
+- **Independent Releases**: Release crates separately or together
+- **Dry Run Mode**: Test the release process without publishing
+- **Trusted Publishing**: Uses crates.io OIDC authentication (no tokens needed)
+- **Automatic Dependency Updates**: CLI's dependency on protocol is updated automatically
+- **Professional Release Notes**: Auto-generated changelogs with installation instructions
 
 ## Release Process
 
-### 1. Update Version Numbers
+### Quick Start
 
-Update version in both crates as needed:
-```bash
-# Update crates/canon-protocol/Cargo.toml if protocol changes
-# Update crates/canon-cli/Cargo.toml for CLI changes
+To release a new version:
+
+1. Go to [Actions → Release workflow](https://github.com/canon-protocol/canon-cli/actions/workflows/release.yml)
+2. Click "Run workflow"
+3. Select options:
+   - **Crate**: Choose which crate(s) to release
+   - **Version bump**: Select patch, minor, or major
+   - **Dry run**: Test without publishing (optional)
+4. Click "Run workflow" to start
+
+### Release Options
+
+#### Crate Selection
+- `canon-protocol` - Release only the protocol library
+- `canon-cli` - Release only the CLI application
+- `both` - Release both crates with the same version bump
+
+#### Version Bump Types
+- `patch` - Bug fixes and minor updates (0.1.0 → 0.1.1)
+- `minor` - New features, backward compatible (0.1.0 → 0.2.0)
+- `major` - Breaking changes (0.1.0 → 1.0.0)
+
+#### Dry Run Mode
+Enable this to test the release process without:
+- Publishing to crates.io
+- Creating git commits
+- Creating GitHub releases
+
+Perfect for validating changes before an actual release.
+
+## What Happens During Release
+
+### 1. Prepare Release
+- Automatically bumps version numbers using `cargo-edit`
+- Updates canon-cli's dependency on canon-protocol if both are released
+- Runs full test suite with new versions
+- Commits version changes to main branch
+
+### 2. Publish to crates.io
+- Publishes canon-protocol first (if selected)
+- Waits for crates.io indexing
+- Publishes canon-cli (if selected)
+- Uses Trusted Publishing - no tokens required!
+
+### 3. Create GitHub Release
+- Creates a tagged release with auto-generated notes
+- Includes installation instructions
+- Shows version changes for each crate
+- Links to crates.io pages
+
+### 4. Summary Report
+- Provides detailed status of all operations
+- Shows which crates were published
+- Reports any failures clearly
+
+## Release Scenarios
+
+### Releasing Both Crates Together
+Perfect for coordinated releases with related changes:
+```
+Crate: both
+Version bump: minor
+Result: Both crates get same version bump
 ```
 
-### 2. Create and Push Tag
-
-```bash
-# For stable releases (publishes to crates.io)
-git tag v0.3.0
-git push origin v0.3.0
-
-# For pre-releases (GitHub release only, no crates.io)
-git tag v0.3.0-beta.1
-git push origin v0.3.0-beta.1
+### Releasing Protocol Only
+When only the core library has changes:
+```
+Crate: canon-protocol
+Version bump: patch
+Result: Only protocol is released
 ```
 
-### 3. Workflow Automatically:
-1. Runs full test suite
-2. Publishes `canon-protocol` to crates.io (if stable)
-3. Waits for indexing
-4. Publishes `canon-cli` to crates.io (if stable)
-5. Creates GitHub release with notes
+### Releasing CLI Only
+For CLI-specific improvements:
+```
+Crate: canon-cli
+Version bump: patch
+Result: Only CLI is released
+```
 
-## Installation
+## Trusted Publishing Setup
 
-Users install from crates.io:
+The workflow uses crates.io Trusted Publishing (OIDC authentication). To configure:
+
+1. Go to crates.io → Your crate → Settings → Trusted Publishing
+2. Add configuration:
+   - Repository owner: `canon-protocol`
+   - Repository name: `canon-cli`
+   - Workflow filename: `release.yml`
+   - Environment: (leave empty)
+3. No CARGO_REGISTRY_TOKEN needed!
+
+## Installation Methods
+
+Users can install the released packages:
+
+### CLI Installation
 ```bash
-# Install CLI
+# Latest version
 cargo install canon-cli
 
-# Or add library to project
+# Specific version
+cargo install canon-cli@0.2.3
+```
+
+### Library Usage
+```toml
 [dependencies]
 canon-protocol = "0.1"
 ```
 
 ## Local Development
 
+### Building
 ```bash
-# Build everything
 cargo build --workspace
+```
 
-# Run tests
+### Testing
+```bash
 cargo test --workspace
+```
 
-# Check formatting
+### Formatting
+```bash
 cargo fmt --all -- --check
+```
 
-# Run clippy
+### Linting
+```bash
 cargo clippy --workspace -- -D warnings
+```
 
-# Run the CLI
+### Running CLI
+```bash
 cargo run -p canon-cli -- --help
 ```
 
-## Publishing Manually (if needed)
+## Manual Publishing (Emergency Only)
+
+If the automated workflow fails, you can publish manually:
 
 ```bash
-# Publish in order (protocol first, then CLI)
+# 1. Update versions in Cargo.toml files manually
+# 2. Commit and push changes
+# 3. Publish in order:
 cargo publish -p canon-protocol
-# Wait for crates.io to index...
+# Wait for indexing...
 cargo publish -p canon-cli
+# 4. Create GitHub release manually
 ```
 
-## Notes
+## Troubleshooting
 
-- Uses crates.io Trusted Publishing (no token needed in CI)
-- Only stable versions (v1.2.3) publish to crates.io
-- Pre-release versions (v1.2.3-beta) only create GitHub releases
-- Both crates can share the same version tag
+### Workflow Fails at Version Bump
+- Check that cargo-edit is installed
+- Verify Cargo.toml files are valid
+
+### Publishing Fails
+- Ensure crates.io Trusted Publishing is configured
+- Check that versions don't already exist
+- Verify canon-protocol is indexed before canon-cli publishes
+
+### Tests Fail After Version Bump
+- The workflow runs tests after bumping versions
+- Fix any issues and restart the workflow
+
+## Best Practices
+
+1. **Always use dry run first** for major releases
+2. **Release protocol before CLI** when both have changes
+3. **Use semantic versioning** correctly:
+   - Breaking changes = major bump
+   - New features = minor bump
+   - Bug fixes = patch bump
+4. **Write good commit messages** - they become release notes
+5. **Tag releases consistently** using the generated tags
+
+## Version History
+
+The workflow automatically creates tags:
+- `v0.2.3` - CLI releases
+- `protocol-v0.1.2` - Protocol-only releases
+- Both use the CLI version tag when released together
+
+## Support
+
+For issues with the release process:
+1. Check the workflow run logs in GitHub Actions
+2. Verify crates.io Trusted Publishing configuration
+3. Open an issue in the repository if problems persist
