@@ -19,7 +19,7 @@ impl Dependency {
         let path_parts: Vec<&str> = parts[0].split('/').collect();
         if path_parts.len() != 2 {
             return Err(ProtocolError::InvalidUri(format!(
-                "Invalid dependency URI format: {}", 
+                "Invalid dependency URI format: {}",
                 uri
             )));
         }

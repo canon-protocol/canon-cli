@@ -29,7 +29,7 @@ pub enum CanonError {
 
     #[error("Command failed: {message}")]
     Command { message: String },
-    
+
     #[error("Protocol error: {0}")]
     Protocol(#[from] canon_protocol::ProtocolError),
 }

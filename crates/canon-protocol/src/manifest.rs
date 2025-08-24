@@ -30,18 +30,18 @@ pub struct ManifestFile {
 impl CanonManifest {
     /// Compute the canonical hash from file hashes
     pub fn compute_canonical_hash(files: &[ManifestFile]) -> String {
-        use sha2::{Sha256, Digest};
-        
+        use sha2::{Digest, Sha256};
+
         let mut hasher = Sha256::new();
-        
+
         // Sort files by path and concatenate hashes
         let mut sorted_files = files.to_vec();
         sorted_files.sort_by(|a, b| a.path.cmp(&b.path));
-        
+
         for file in sorted_files {
             hasher.update(&file.hash);
         }
-        
+
         use base64::Engine;
         let engine = base64::engine::general_purpose::STANDARD;
         format!("sha256:{}", engine.encode(hasher.finalize()))

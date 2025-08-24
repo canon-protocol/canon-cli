@@ -1,5 +1,5 @@
 //! Canon Protocol core types and validation
-//! 
+//!
 //! This library provides the fundamental data structures and parsing logic
 //! for the Canon Protocol specification format.
 
