@@ -10,11 +10,13 @@ Canon CLI uses a professional, automated release process with GitHub Actions. Th
 ## Key Features
 
 - **Automated Version Bumping**: No manual Cargo.toml edits required
+- **Automatic Version Detection**: Can analyze commits to determine version bump
 - **Independent Releases**: Release crates separately or together
 - **Dry Run Mode**: Test the release process without publishing
 - **Trusted Publishing**: Uses crates.io OIDC authentication (no tokens needed)
 - **Automatic Dependency Updates**: CLI's dependency on protocol is updated automatically
 - **Professional Release Notes**: Auto-generated changelogs with installation instructions
+- **Conventional Commits Support**: Automatic changelog generation from commit messages
 
 ## Release Process
 
@@ -38,6 +40,7 @@ To release a new version:
 - `both` - Release both crates with the same version bump
 
 #### Version Bump Types
+- `auto` - Automatically detect based on conventional commits (recommended)
 - `patch` - Bug fixes and minor updates (0.1.0 → 0.1.1)
 - `minor` - New features, backward compatible (0.1.0 → 0.2.0)
 - `major` - Breaking changes (0.1.0 → 1.0.0)
@@ -188,16 +191,71 @@ cargo publish -p canon-cli
 - The workflow runs tests after bumping versions
 - Fix any issues and restart the workflow
 
+## Conventional Commits
+
+The release workflow supports automatic version detection based on [Conventional Commits](https://www.conventionalcommits.org/). This allows the workflow to automatically determine the appropriate version bump based on your commit messages.
+
+### Commit Message Format
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Version Bump Rules
+
+| Commit Type | Version Bump | Example |
+|-------------|--------------|---------|
+| `feat:` | Minor | `feat: add support for YAML configs` |
+| `fix:` | Patch | `fix: resolve parsing error in manifest` |
+| `feat!:` or `BREAKING CHANGE:` | Major | `feat!: redesign configuration format` |
+| `chore:`, `docs:`, `style:`, `refactor:`, `test:` | None | `chore: update dependencies` |
+
+### Examples
+
+```bash
+# Patch release (bug fix)
+git commit -m "fix: correct validation logic for dependencies"
+
+# Minor release (new feature)
+git commit -m "feat: add support for private registries"
+
+# Major release (breaking change)
+git commit -m "feat!: change manifest format to v2
+
+BREAKING CHANGE: The manifest format has been completely redesigned.
+Old manifests will need to be migrated using the canon migrate command."
+
+# No release (maintenance)
+git commit -m "chore: update CI configuration"
+git commit -m "docs: improve README examples"
+```
+
+### Auto-Version Detection
+
+When you select `auto` for version bump, the workflow will:
+
+1. Analyze all commits since the last release tag
+2. Identify the highest-priority change type:
+   - Breaking changes → Major bump
+   - New features → Minor bump
+   - Bug fixes → Patch bump
+   - Other changes → Patch bump (default)
+3. Apply the appropriate version bump
+
+This ensures consistent versioning based on the actual changes in your codebase.
+
 ## Best Practices
 
-1. **Always use dry run first** for major releases
-2. **Release protocol before CLI** when both have changes
-3. **Use semantic versioning** correctly:
-   - Breaking changes = major bump
-   - New features = minor bump
-   - Bug fixes = patch bump
-4. **Write good commit messages** - they become release notes
+1. **Use conventional commits** for automatic version detection
+2. **Always use dry run first** for major releases
+3. **Release protocol before CLI** when both have changes
+4. **Write descriptive commit messages** - they appear in changelogs
 5. **Tag releases consistently** using the generated tags
+6. **Review auto-detected versions** before publishing
 
 ## Version History
 

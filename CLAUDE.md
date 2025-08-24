@@ -76,9 +76,106 @@ When releasing:
 2. Wait for crates.io indexing
 3. Then publish `canon-cli` (which depends on canon-protocol)
 
+## Commit Messages and Versioning
+
+### IMPORTANT: This Repository Uses Conventional Commits
+
+This repository uses **Conventional Commits** for automatic versioning and changelog generation. Your commit messages directly affect version bumps during releases.
+
+### Commit Format
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Version Impact
+
+| Commit Type | Version Bump | When to Use | Example |
+|-------------|--------------|-------------|---------|
+| `feat:` | **Minor** (0.1.0 → 0.2.0) | New features or capabilities | `feat: add support for private registries` |
+| `fix:` | **Patch** (0.1.0 → 0.1.1) | Bug fixes | `fix: resolve manifest parsing error` |
+| `feat!:` or with `BREAKING CHANGE:` | **Major** (0.1.0 → 1.0.0) | Breaking changes | `feat!: redesign configuration format` |
+| `chore:` | No bump | Maintenance tasks | `chore: update dependencies` |
+| `docs:` | No bump | Documentation only | `docs: improve README examples` |
+| `style:` | No bump | Code style changes | `style: format code with rustfmt` |
+| `refactor:` | No bump | Code refactoring | `refactor: simplify validation logic` |
+| `test:` | No bump | Test changes | `test: add integration tests for install command` |
+| `ci:` | No bump | CI/CD changes | `ci: update GitHub Actions workflow` |
+
+### Examples for Common Tasks
+
+```bash
+# When adding a new CLI command or feature
+git commit -m "feat: add 'canon validate' command for checking manifest syntax"
+
+# When fixing a bug
+git commit -m "fix: correctly handle empty dependency arrays in manifest"
+
+# When making breaking changes (RARE - avoid unless necessary)
+git commit -m "feat!: change manifest format from v1 to v2
+
+BREAKING CHANGE: Manifest files now require a 'version' field.
+Users must migrate existing manifests using 'canon migrate'."
+
+# When updating dependencies or maintenance
+git commit -m "chore: update cargo dependencies to latest versions"
+
+# When improving documentation
+git commit -m "docs: add examples for using canon with private registries"
+
+# When refactoring without changing functionality
+git commit -m "refactor: extract manifest validation into separate module"
+```
+
+### Guidelines
+
+1. **Default to `chore:`** for maintenance tasks that don't affect users
+2. **Use `feat:`** only for user-visible features
+3. **Use `fix:`** for actual bug fixes, not improvements
+4. **Avoid `feat!:`** unless absolutely necessary - breaking changes are disruptive
+5. **Be descriptive** - your message becomes part of the changelog
+6. **Keep the first line under 72 characters**
+7. **Use present tense** ("add" not "added")
+
+### Git Identity
+
+**IMPORTANT**: When making commits, use ONLY the system's git identity. Do NOT add:
+- Co-authored-by trailers
+- Any mention of Claude or AI assistance
+- Secondary authors or sign-offs
+
+Simply use the existing git user configuration for all commits. The commit should appear as if it was made directly by the repository owner.
+
+### Special Considerations
+
+- Multiple commits of different types between releases will cause the highest-priority bump (major > minor > patch)
+- The release workflow can auto-detect the version bump using the `auto` option
+- Commit messages are used to generate changelogs via git-cliff
+- Poor commit messages = poor changelogs
+
 ## CI/CD
 
 The repository uses GitHub Actions for CI:
 - Every push runs: build, test, fmt check, and clippy
-- Release tags (v*) trigger publishing to crates.io
+- Releases use workflow_dispatch with automatic version detection
 - No binary builds - distribution is via `cargo install canon-cli`
+
+### Release Process
+
+Releases are triggered manually via GitHub Actions:
+1. Go to Actions → Release workflow
+2. Select crate(s) to release
+3. Choose version bump (`auto` recommended - uses conventional commits)
+4. Optionally enable dry run for testing
+
+The workflow will:
+- Analyze commits to determine version bump (if using `auto`)
+- Update version numbers automatically
+- Generate changelog from commit messages
+- Publish to crates.io
+- Create GitHub release
+
+See `docs/RELEASE.md` for detailed release documentation.

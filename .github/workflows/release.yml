@@ -20,6 +20,7 @@ on:
         required: true
         type: choice
         options:
+          - auto
           - patch
           - minor
           - major
@@ -42,6 +43,7 @@ jobs:
       cli_version: ${{ steps.versions.outputs.cli_version }}
       release_protocol: ${{ steps.versions.outputs.release_protocol }}
       release_cli: ${{ steps.versions.outputs.release_cli }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,8 +59,10 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install cargo-edit for version management
-        run: cargo install cargo-edit
+      - name: Install tools for version management
+        run: |
+          cargo install cargo-edit
+          cargo install git-cliff
 
       - name: Calculate new versions
         id: versions
@@ -85,10 +89,53 @@ jobs:
           echo "Current canon-protocol version: $CURRENT_PROTOCOL_VERSION"
           echo "Current canon-cli version: $CURRENT_CLI_VERSION"
           
+          # Determine version bump type
+          VERSION_BUMP="${{ inputs.version_bump }}"
+          
+          if [ "$VERSION_BUMP" = "auto" ]; then
+            echo "Auto-detecting version bump based on conventional commits..."
+            
+            # Get the last tag for the crate we're releasing
+            if [ "$RELEASE_PROTOCOL" = "true" ] && [ "$RELEASE_CLI" = "false" ]; then
+              LAST_TAG=$(git tag --list 'protocol-v*' --sort=-version:refname | head -n1)
+              [ -z "$LAST_TAG" ] && LAST_TAG=$(git tag --list 'v*' --sort=-version:refname | head -n1)
+            else
+              LAST_TAG=$(git tag --list 'v*' --sort=-version:refname | head -n1)
+            fi
+            
+            if [ -z "$LAST_TAG" ]; then
+              echo "No previous tags found, defaulting to patch bump"
+              VERSION_BUMP="patch"
+            else
+              echo "Analyzing commits since $LAST_TAG..."
+              
+              # Check for breaking changes
+              if git log "$LAST_TAG"..HEAD --grep="BREAKING CHANGE" --grep="!:" -E --oneline | grep -q .; then
+                VERSION_BUMP="major"
+                echo "Found breaking changes → major bump"
+              # Check for new features
+              elif git log "$LAST_TAG"..HEAD --grep="^feat" --oneline | grep -q .; then
+                VERSION_BUMP="minor"
+                echo "Found new features → minor bump"
+              # Check for fixes
+              elif git log "$LAST_TAG"..HEAD --grep="^fix" --oneline | grep -q .; then
+                VERSION_BUMP="patch"
+                echo "Found bug fixes → patch bump"
+              else
+                VERSION_BUMP="patch"
+                echo "No conventional commits found, defaulting to patch bump"
+              fi
+            fi
+            
+            echo "Detected version bump: $VERSION_BUMP"
+          fi
+          
+          echo "version_bump_type=$VERSION_BUMP" >> $GITHUB_OUTPUT
+          
           # Bump versions for selected crates
           if [ "$RELEASE_PROTOCOL" = "true" ]; then
             cd crates/canon-protocol
-            cargo set-version --bump ${{ inputs.version_bump }}
+            cargo set-version --bump $VERSION_BUMP
             NEW_PROTOCOL_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "canon-protocol") | .version')
             echo "New canon-protocol version: $NEW_PROTOCOL_VERSION"
             echo "protocol_version=$NEW_PROTOCOL_VERSION" >> $GITHUB_OUTPUT
@@ -107,7 +154,7 @@ jobs:
           
           if [ "$RELEASE_CLI" = "true" ]; then
             cd crates/canon-cli
-            cargo set-version --bump ${{ inputs.version_bump }}
+            cargo set-version --bump $VERSION_BUMP
             NEW_CLI_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "canon-cli") | .version')
             echo "New canon-cli version: $NEW_CLI_VERSION"
             echo "cli_version=$NEW_CLI_VERSION" >> $GITHUB_OUTPUT
@@ -119,11 +166,48 @@ jobs:
       - name: Update Cargo.lock
         run: cargo update --workspace
 
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Generate changelog for the release
+          if [ "${{ steps.versions.outputs.release_protocol }}" = "true" ] && [ "${{ steps.versions.outputs.release_cli }}" = "false" ]; then
+            echo "Generating changelog for canon-protocol..."
+            git-cliff --config cliff.toml --tag "protocol-v${{ steps.versions.outputs.protocol_version }}" --unreleased --strip all > CHANGELOG_TEMP.md
+          elif [ "${{ steps.versions.outputs.release_cli }}" = "true" ]; then
+            echo "Generating changelog for canon-cli..."
+            git-cliff --config cliff.toml --tag "v${{ steps.versions.outputs.cli_version }}" --unreleased --strip all > CHANGELOG_TEMP.md
+          fi
+          
+          # Store changelog for later use in release notes
+          if [ -f CHANGELOG_TEMP.md ]; then
+            echo "changelog<<EOF" >> $GITHUB_OUTPUT
+            cat CHANGELOG_TEMP.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run tests with new versions
         run: |
           cargo test --workspace --all-features
           cargo fmt --all -- --check
           cargo clippy --workspace --all-features -- -D warnings
+
+      - name: Update CHANGELOG.md
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          # Update the main CHANGELOG.md file
+          if [ -f CHANGELOG_TEMP.md ]; then
+            if [ -f CHANGELOG.md ]; then
+              # Prepend new changelog to existing file
+              echo "Updating CHANGELOG.md..."
+              cat CHANGELOG_TEMP.md CHANGELOG.md > CHANGELOG_NEW.md
+              mv CHANGELOG_NEW.md CHANGELOG.md
+            else
+              # Create new CHANGELOG.md
+              echo "Creating CHANGELOG.md..."
+              mv CHANGELOG_TEMP.md CHANGELOG.md
+            fi
+            rm -f CHANGELOG_TEMP.md
+          fi
 
       - name: Commit version changes
         if: ${{ inputs.dry_run != true }}
@@ -280,7 +364,7 @@ jobs:
             
             ## 📝 Changelog
             
-            See below for all changes since the last release.
+            ${{ needs.prepare-release.outputs.changelog || 'See below for all changes since the last release.' }}
 
   summary:
     name: Release Summary
