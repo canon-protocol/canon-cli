@@ -106,15 +106,43 @@ Result: Only CLI is released
 
 ## Trusted Publishing Setup
 
-The workflow uses crates.io Trusted Publishing (OIDC authentication). To configure:
+The workflow uses crates.io Trusted Publishing (OIDC authentication). 
 
-1. Go to crates.io → Your crate → Settings → Trusted Publishing
-2. Add configuration:
-   - Repository owner: `canon-protocol`
-   - Repository name: `canon-cli`
-   - Workflow filename: `release.yml`
-   - Environment: (leave empty)
-3. No CARGO_REGISTRY_TOKEN needed!
+### ⚠️ First-Time Crate Publishing
+
+**IMPORTANT**: Trusted Publishing tokens cannot create new crates. For any new crate, you must:
+
+1. **Publish the first version manually** from your local machine:
+   ```bash
+   # Ensure you have a crates.io API token configured
+   cargo login
+   
+   # Publish the new crate manually
+   cd crates/your-new-crate
+   cargo publish
+   ```
+
+2. **Configure Trusted Publishing** after the crate exists:
+   - Go to crates.io → Your crate → Settings → Trusted Publishing
+   - Add configuration:
+     - Repository owner: `canon-protocol`
+     - Repository name: `canon-cli`
+     - Workflow filename: `release.yml`
+     - Environment: (leave empty)
+
+3. **Future releases work automatically** via GitHub Actions
+
+### Why This Limitation?
+
+This is a security measure by crates.io to prevent:
+- Accidental crate name squatting
+- Malicious workflows from claiming crate names
+- Ensuring human intent for initial crate creation
+
+### Current Status
+
+- ✅ `canon-cli` - Already published, works with Trusted Publishing
+- ⚠️ `canon-protocol` - New crate, needs manual first publish
 
 ## Installation Methods
 

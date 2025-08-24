@@ -76,6 +76,16 @@ When releasing:
 2. Wait for crates.io indexing
 3. Then publish `canon-cli` (which depends on canon-protocol)
 
+### First-Time Crate Publishing
+**IMPORTANT**: New crates must be published manually first due to crates.io Trusted Publishing limitations.
+
+If you create a new crate in this workspace:
+1. Publish it manually from your local machine first: `cargo publish -p new-crate-name`
+2. Configure Trusted Publishing on crates.io for the new crate
+3. Future releases will work automatically via GitHub Actions
+
+This is a security limitation - Trusted Publishing tokens cannot create new crates, only update existing ones.
+
 ## Commit Messages and Versioning
 
 ### IMPORTANT: This Repository Uses Conventional Commits
