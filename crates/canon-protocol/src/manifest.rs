@@ -20,7 +20,7 @@ pub struct ManifestSpecification {
     pub r#type: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ManifestFile {
     pub path: String,
     pub hash: String,
