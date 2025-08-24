@@ -75,7 +75,7 @@ canon config list
 
 ## Installation
 
-### Recommended: Install from Crates.io
+### Install from Crates.io
 ```bash
 # Install the latest version
 cargo install canon-cli
@@ -84,23 +84,7 @@ cargo install canon-cli
 cargo install canon-cli --force
 
 # Install a specific version
-cargo install canon-cli@0.1.0
-```
-
-### Alternative: Download Pre-built Binary
-```bash
-# Linux x64
-wget https://github.com/canon-protocol/canon-cli/releases/latest/download/canon-linux-x64
-chmod +x canon-linux-x64
-./canon-linux-x64 --version
-
-# macOS Apple Silicon
-wget https://github.com/canon-protocol/canon-cli/releases/latest/download/canon-macos-apple
-chmod +x canon-macos-apple
-./canon-macos-apple --version
-
-# Windows - download canon-windows.exe from releases page
-# Note: You may see a SmartScreen warning - see docs/WINDOWS-SECURITY.md for info
+cargo install canon-cli@0.2.2
 ```
 
 ### Build from Source
@@ -114,7 +98,7 @@ cargo build --release
 ## Development
 
 - **For developers**: See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup and workflow
-- **For releases**: See [docs/RELEASE.md](docs/RELEASE.md) for build and release process
+- **For releases**: See [docs/RELEASE.md](docs/RELEASE.md) for the release process
 
 ## Contributing
 
