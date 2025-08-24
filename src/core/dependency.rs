@@ -44,6 +44,7 @@ impl Dependency {
     pub fn local_path(&self, registry_domain: &str) -> PathBuf {
         let mut path = PathBuf::from(".canon");
         path.push(registry_domain);
+        path.push("specs"); // Add specs directory to match registry structure
         path.push(&self.publisher);
         path.push(&self.name);
         if let Some(ref version) = self.version {
@@ -56,7 +57,7 @@ impl Dependency {
     pub fn registry_url(&self, registry_base: &str) -> String {
         let version = self.version.as_deref().unwrap_or("latest");
         format!(
-            "{}/{}/{}/{}/",
+            "{}/specs/{}/{}/{}/",
             registry_base.trim_end_matches('/'),
             self.publisher,
             self.name,
@@ -67,5 +68,75 @@ impl Dependency {
     /// Check if this dependency is already installed
     pub fn is_installed(&self, registry_domain: &str) -> bool {
         self.local_path(registry_domain).exists()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_dependency() {
+        let dep = Dependency::parse("canon-protocol.org/type@1.0.0").unwrap();
+        assert_eq!(dep.publisher, "canon-protocol.org");
+        assert_eq!(dep.name, "type");
+        assert_eq!(dep.version, Some("1.0.0".to_string()));
+
+        let dep_no_version = Dependency::parse("example.com/api").unwrap();
+        assert_eq!(dep_no_version.publisher, "example.com");
+        assert_eq!(dep_no_version.name, "api");
+        assert_eq!(dep_no_version.version, None);
+    }
+
+    #[test]
+    fn test_local_path() {
+        let dep = Dependency {
+            publisher: "canon-protocol.org".to_string(),
+            name: "type".to_string(),
+            version: Some("1.0.0".to_string()),
+        };
+
+        let path = dep.local_path("registry.canon-protocol.org");
+        assert_eq!(
+            path,
+            PathBuf::from(".canon/registry.canon-protocol.org/specs/canon-protocol.org/type/1.0.0")
+        );
+    }
+
+    #[test]
+    fn test_registry_url() {
+        let dep = Dependency {
+            publisher: "canon-protocol.org".to_string(),
+            name: "type".to_string(),
+            version: Some("1.0.0".to_string()),
+        };
+
+        let url = dep.registry_url("https://registry.canon-protocol.org");
+        assert_eq!(
+            url,
+            "https://registry.canon-protocol.org/specs/canon-protocol.org/type/1.0.0/"
+        );
+
+        // Test with trailing slash
+        let url_with_slash = dep.registry_url("https://registry.canon-protocol.org/");
+        assert_eq!(
+            url_with_slash,
+            "https://registry.canon-protocol.org/specs/canon-protocol.org/type/1.0.0/"
+        );
+    }
+
+    #[test]
+    fn test_registry_url_without_version() {
+        let dep = Dependency {
+            publisher: "example.com".to_string(),
+            name: "api".to_string(),
+            version: None,
+        };
+
+        let url = dep.registry_url("https://registry.canon-protocol.org");
+        assert_eq!(
+            url,
+            "https://registry.canon-protocol.org/specs/example.com/api/latest/"
+        );
     }
 }
