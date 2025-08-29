@@ -34,6 +34,10 @@ pub enum Commands {
         /// Overwrite existing canon.yml
         #[arg(long)]
         force: bool,
+
+        /// Skip interactive prompts and use defaults
+        #[arg(long)]
+        non_interactive: bool,
     },
 
     /// Install dependencies from canon.yml

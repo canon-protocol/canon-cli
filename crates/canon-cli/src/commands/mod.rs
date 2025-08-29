@@ -11,7 +11,10 @@ use crate::utils::CanonResult;
 
 pub async fn handle_command(command: Commands) -> CanonResult<()> {
     match command {
-        Commands::Init { force } => init::run_init(force).await,
+        Commands::Init {
+            force,
+            non_interactive,
+        } => init::run_init(force, non_interactive).await,
         Commands::Install => install::run_install().await,
         Commands::Add { uri } => add::run_add(&uri).await,
         Commands::Validate {
