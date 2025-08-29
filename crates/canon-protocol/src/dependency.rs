@@ -62,15 +62,21 @@ impl Dependency {
         })
     }
 
-    /// Get the local storage path for this dependency
-    pub fn local_path(&self) -> PathBuf {
+    /// Get the local storage path for this dependency with registry
+    pub fn local_path_with_registry(&self, registry: &str) -> PathBuf {
         let mut path = PathBuf::from(".canon");
+        path.push(registry);
         path.push(&self.publisher);
         path.push(&self.id);
         if let Some(ref version) = self.version {
             path.push(version);
         }
         path
+    }
+    
+    /// Get the local storage path for this dependency (defaults to canon.canon-protocol.org)
+    pub fn local_path(&self) -> PathBuf {
+        self.local_path_with_registry("canon.canon-protocol.org")
     }
 
     /// Construct the URL for fetching from canon.canon-protocol.org
@@ -82,6 +88,12 @@ impl Dependency {
         )
     }
 
+    /// Check if this dependency exists in localhost
+    pub fn is_in_localhost(&self) -> bool {
+        let canon_file = self.local_path_with_registry("localhost").join("canon.yml");
+        canon_file.exists()
+    }
+    
     /// Check if this dependency is already installed
     pub fn is_installed(&self) -> bool {
         let canon_file = self.local_path().join("canon.yml");

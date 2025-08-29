@@ -4,6 +4,7 @@ pub mod clean;
 pub mod config;
 pub mod init;
 pub mod install;
+pub mod publish;
 pub mod validate;
 
 use crate::cli::{Commands, ConfigCommands};
@@ -31,6 +32,12 @@ pub async fn handle_command(command: Commands) -> CanonResult<()> {
             no_cache,
             parallel,
         } => build::run_build(engine, output, sign, key, no_cache, parallel).await,
+        Commands::Publish {
+            registry,
+            token,
+            dry_run,
+            skip_verification,
+        } => publish::run_publish(registry, token, dry_run, skip_verification).await,
         Commands::Clean { all, purge } => clean::run_clean(all, purge).await,
         Commands::Config { command } => match command {
             ConfigCommands::Get { key } => config::get_config(&key).await,
