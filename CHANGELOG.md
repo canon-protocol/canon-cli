@@ -1,3 +1,13 @@
+## [0.2.10] - 2025-08-29
+
+### 🐛 Bug Fixes
+
+- Fixing versions.
+
+### ⚙️ Miscellaneous Tasks
+
+- Bump version(s) for release
+
 ## [0.2.8] - 2025-08-29
 
 ## [protocol-v0.1.5] - 2025-08-29
