@@ -1,6 +1,7 @@
-use crate::core::{CanonRepository, Dependency};
+use crate::core::{CanonSpecification, Dependency};
 use crate::utils::{CanonError, CanonResult};
 use console::style;
+use serde_yaml::Value;
 use std::fs;
 
 pub async fn run_add(uri: &str) -> CanonResult<()> {
@@ -18,17 +19,31 @@ pub async fn run_add(uri: &str) -> CanonResult<()> {
     }
 
     // Validate the dependency URI format
-    Dependency::parse(uri)?;
+    Dependency::parse(uri).map_err(CanonError::Protocol)?;
 
-    // Read canon.yml
+    // Read and parse canon.yml
     let yaml_content = fs::read_to_string(&canon_yml_path).map_err(CanonError::Io)?;
-    let mut repo: CanonRepository =
+    let mut spec: CanonSpecification =
         serde_yaml::from_str(&yaml_content).map_err(|e| CanonError::Config {
             message: format!("Failed to parse canon.yml: {}", e),
         })?;
 
+    // Get or create dependencies array
+    let dependencies = spec
+        .content
+        .entry("dependencies".to_string())
+        .or_insert_with(|| Value::Sequence(Vec::new()));
+
+    // Ensure it's a sequence
+    let deps_array = dependencies
+        .as_sequence_mut()
+        .ok_or_else(|| CanonError::Config {
+            message: "Dependencies field must be an array".to_string(),
+        })?;
+
     // Check if dependency already exists
-    if repo.dependencies.contains(&uri.to_string()) {
+    let uri_value = Value::String(uri.to_string());
+    if deps_array.contains(&uri_value) {
         println!(
             "{} {} already exists in canon.yml",
             style("Dependency").yellow(),
@@ -38,10 +53,10 @@ pub async fn run_add(uri: &str) -> CanonResult<()> {
     }
 
     // Add the dependency
-    repo.add_dependency(uri.to_string());
+    deps_array.push(uri_value);
 
     // Write updated canon.yml
-    let yaml_content = serde_yaml::to_string(&repo).map_err(CanonError::Serialization)?;
+    let yaml_content = serde_yaml::to_string(&spec).map_err(CanonError::Serialization)?;
     fs::write(&canon_yml_path, yaml_content).map_err(CanonError::Io)?;
 
     println!(

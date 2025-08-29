@@ -58,41 +58,25 @@ pub async fn run_clean(all: bool, purge: bool) -> CanonResult<()> {
                 style("Canon has been completely removed from this project").yellow()
             );
         }
-    } else if all {
-        // Remove all cached data
-        println!("{} all cached data...", style("Removing").yellow().bold());
+    } else {
+        // Default and --all: Remove all cached dependencies
+        if all {
+            println!("{} all cached data...", style("Removing").yellow().bold());
+        } else {
+            println!("{} cached dependencies...", style("Cleaning").cyan().bold());
+        }
 
         if canon_dir.exists() {
             fs::remove_dir_all(canon_dir).map_err(CanonError::Io)?;
             println!("  {} Removed .canon/", style("✓").green());
             println!();
-            println!("All cached data has been removed");
+            println!("All cached dependencies have been removed");
             println!(
                 "Run {} to re-download dependencies",
                 style("canon install").cyan()
             );
         } else {
-            println!("No cached data found");
-        }
-    } else {
-        // Default: just remove specs
-        println!(
-            "{} cached specifications...",
-            style("Cleaning").cyan().bold()
-        );
-
-        let specs_dir = canon_dir.join("specs");
-        if specs_dir.exists() {
-            fs::remove_dir_all(&specs_dir).map_err(CanonError::Io)?;
-            println!("  {} Removed .canon/specs/", style("✓").green());
-            println!();
-            println!("Cached specifications removed");
-            println!(
-                "Run {} to re-download dependencies",
-                style("canon install").cyan()
-            );
-        } else {
-            println!("No cached specifications found");
+            println!("No cached dependencies found");
         }
     }
 

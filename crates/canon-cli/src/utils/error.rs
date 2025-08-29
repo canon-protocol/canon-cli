@@ -15,6 +15,9 @@ pub enum CanonError {
     #[error("Registry error: {url} - {status}")]
     RegistryError { url: String, status: String },
 
+    #[error("Network error: {message}")]
+    Network { message: String },
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 

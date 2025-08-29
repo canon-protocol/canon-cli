@@ -1,25 +1,61 @@
-# Canon CLI Development Guide
+# Development Guide
 
 ## Quick Start
 
 ```bash
-# Clone and setup
+# Clone the repository
 git clone https://github.com/canon-protocol/canon-cli.git
 cd canon-cli
 
-# Install tools (recommended)
-cargo install just
+# Build the project
+cargo build --workspace
 
-# Run all checks
-just check
+# Run tests
+cargo test --workspace
 
-# Build and test
-just alpha-local
+# Run the CLI
+cargo run -p canon-cli -- --help
 ```
 
-## Development Commands
+## Development Workflow
 
-### With Just (Recommended)
+### Building
+
+```bash
+# Debug build
+cargo build --workspace
+
+# Release build
+cargo build --workspace --release
+```
+
+### Testing
+
+```bash
+# Run all tests
+cargo test --workspace
+
+# Run with output
+cargo test --workspace -- --nocapture
+```
+
+### Code Quality
+
+```bash
+# Format code
+cargo fmt --all
+
+# Check formatting
+cargo fmt --all -- --check
+
+# Run clippy
+cargo clippy --workspace -- -D warnings
+```
+
+### Using Just
+
+If you have [just](https://github.com/casey/just) installed:
+
 ```bash
 just --list                    # Show all commands
 just build                     # Build release binary  
@@ -27,116 +63,87 @@ just test                      # Run test suite
 just fmt                       # Format code
 just lint                      # Run clippy
 just check                     # fmt + lint + test
-just alpha-local              # Build and test locally
-just run -- --help           # Run with arguments
-just test-init                # Test the init command
-just clean                    # Clean build artifacts
 ```
 
-### With Make (Alternative)
+### Using Make
+
+Alternatively, use the Makefile:
+
 ```bash
-make help                     # Show available targets
-make build test fmt lint check alpha-local clean
+make help                      # Show available targets
+make build test fmt lint check
+```
+
+## Project Structure
+
+```
+canon-cli/
+├── crates/
+│   ├── canon-protocol/       # Core protocol library
+│   │   └── src/
+│   │       ├── dependency.rs # URI parsing and version operators
+│   │       ├── manifest.rs   # Manifest structure
+│   │       ├── signature.rs  # Signature types
+│   │       └── specification.rs # Canon spec types
+│   │
+│   └── canon-cli/            # CLI application
+│       └── src/
+│           ├── main.rs       # Entry point
+│           ├── cli.rs        # Command definitions
+│           └── commands/     # Command implementations
+│               ├── init.rs   # Initialize project
+│               ├── install.rs # Install dependencies
+│               ├── add.rs    # Add dependency
+│               └── clean.rs  # Clean cache
+│
+├── Cargo.toml               # Workspace configuration
+├── justfile                 # Just commands
+└── Makefile                 # Make targets
+```
+
+## Testing Commands
+
+```bash
+# Test init command
+cargo run -p canon-cli -- init
+
+# Test with verbose output
+cargo run -p canon-cli -- --verbose init
+
+# Test add command
+cargo run -p canon-cli -- add "profiles.org/author@1.0.0"
+
+# Test install
+cargo run -p canon-cli -- install
 ```
 
 ## Code Standards
 
-- **Formatting**: `cargo fmt` (enforced by CI)
-- **Linting**: `cargo clippy -- -D warnings` (zero warnings allowed)
-- **Testing**: All tests must pass
-- **Documentation**: Public APIs need docs
+- **Rust Edition**: 2021
+- **Formatting**: Use `cargo fmt` (enforced by CI)
+- **Linting**: Pass `cargo clippy` with no warnings
+- **Tests**: All tests must pass
+- **Documentation**: Document public APIs
 
-## Architecture
+## Commit Guidelines
 
-```
-src/
-├── main.rs              # Entry point & CLI setup
-├── cli.rs               # Command-line parsing (clap)
-├── commands/            # Command implementations
-│   ├── init.rs         # canon init (implemented)
-│   ├── validate.rs     # canon validate (stub)
-│   ├── build.rs        # canon build (stub)
-│   ├── clean.rs        # canon clean (stub)
-│   └── config.rs       # canon config (stub)
-├── core/               # Domain logic
-│   └── specification.rs # Canon spec data structures
-├── config/             # Configuration management
-├── utils/              # Utilities & error handling
-    └── error.rs        # Error types with thiserror
-```
+Use conventional commits for automatic versioning:
 
-## Testing
-
-### Quick Test
 ```bash
-# Test the main feature
-just test-init
+# Bug fix (patch release)
+git commit -m "fix: resolve URI parsing error"
 
-# Or manually
-cargo run -- init test-project --author "Test User"
-cd test-project && ls -la
-# Should see: canon.yml, sources/
-```
+# New feature (minor release)  
+git commit -m "feat: add support for version operators"
 
-### Full Test Suite
-```bash
-just test                     # Run all tests
-cargo test -- --nocapture   # Show output
-cargo test init              # Test specific module
+# Breaking change (major release)
+git commit -m "feat!: change manifest format"
+
+# No release
+git commit -m "chore: update dependencies"
+git commit -m "docs: improve README"
 ```
 
 ## Release Process
 
-### For Alpha Testing
-```bash
-git push origin main          # Triggers automatic alpha build
-# Check: https://github.com/canon-protocol/canon-cli/releases/tag/alpha
-```
-
-### For Stable Release
-```bash
-# Update version in Cargo.toml first
-git tag v0.2.0               # Create version tag
-git push origin v0.2.0       # Triggers release build + crates.io publish
-```
-
-### Publishing to Crates.io
-Stable releases (e.g., `v0.1.0`) are automatically published to crates.io.
-Pre-releases (e.g., `v0.1.0-beta.1`) are GitHub-only.
-
-```bash
-# Users can then install via:
-cargo install canon-cli
-```
-
-See [RELEASE.md](./RELEASE.md) for complete release documentation.
-
-## Common Issues
-
-### Build Fails
-```bash
-cargo clean && cargo build --release
-```
-
-### Tests Fail
-```bash
-cargo test -- --nocapture    # See detailed output
-```
-
-### CI Fails
-1. Run `just check` locally first
-2. Fix any formatting/linting issues
-3. Ensure all tests pass
-
-### Need Help?
-- Check [RELEASE.md](./RELEASE.md) for release issues
-- Look at GitHub Actions logs
-- Test locally with `just alpha-local`
-
-## Current Status
-
-- **canon init**: Implemented
-- **Other commands**: Stubs only
-- **Build system**: Complete with CI/CD
-- **Cross-platform**: All major platforms supported
-
+See [RELEASE.md](RELEASE.md) for the automated release workflow.

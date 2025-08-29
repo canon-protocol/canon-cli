@@ -1,105 +1,148 @@
 # Canon CLI
 
-A command-line tool for creating and managing Canon protocol specifications.
+Command-line tool for Canon Protocol - a minimal, extensible standard for defining and publishing typed specifications.
 
-## Project Structure
+## Canon Protocol
 
-This is a Cargo workspace containing two crates:
-
-```
-canon-cli/
-├── Cargo.toml                    # Workspace configuration
-├── crates/
-│   ├── canon-protocol/           # Core protocol library
-│   │   ├── Cargo.toml
-│   │   ├── src/
-│   │   │   ├── lib.rs           # Library exports
-│   │   │   ├── specification.rs # Canon specification types
-│   │   │   ├── dependency.rs    # Dependency parsing
-│   │   │   ├── repository.rs    # Repository configuration
-│   │   │   ├── manifest.rs      # Manifest types
-│   │   │   ├── signature.rs     # Signature types
-│   │   │   └── error.rs         # Error types
-│   │   └── README.md
-│   │
-│   └── canon-cli/                # CLI application
-│       ├── Cargo.toml
-│       ├── src/
-│       │   ├── main.rs          # Entry point
-│       │   ├── cli.rs           # Command-line parsing
-│       │   ├── commands/        # Command implementations
-│       │   ├── config/          # Configuration management
-│       │   ├── core/            # Core re-exports
-│       │   └── utils/           # Utilities
-│       └── README.md
-└── README.md                     # This file
-```
-
-## Crates
-
-- **`canon-protocol`** - Core library with Canon Protocol types and validation (v0.1.0)
-- **`canon-cli`** - Command-line interface tool (v0.2.2)
-
-## Current Status
-
-- ✅ `canon init` - Initialize Canon repository with core dependencies
-- ✅ `canon install` - Install dependencies from registry
-- ✅ `canon add` - Add new dependencies to canon.yml
-- ✅ `canon clean` - Remove cached specifications with various options
-- ✅ Dependency management system
-- ✅ Basic CLI structure and error handling
-- ⏳ Additional commands in development
-
-## Usage
-
-```bash
-# Initialize a new Canon repository with core dependencies
-canon init
-
-# Install dependencies from canon.yml
-canon install
-
-# Add a new dependency
-canon add "api.io/openapi@2.0.0"
-
-# Clean cached specifications
-canon clean                     # Remove .canon/specs/
-canon clean --all              # Remove entire .canon/
-canon clean --purge            # Remove .canon/ and canon.yml (complete uninstall)
-
-# Other commands (stubs for now)
-canon validate
-canon build
-canon config list
-```
+Canon Protocol provides a single meta-type that enables the creation of any specification type, combined with DNS-based publisher verification and semantic versioning. This allows communities to build rich ecosystems of interoperable specifications without central coordination.
 
 ## Installation
 
-### Install from Crates.io
 ```bash
-# Install the latest version
+# Install from crates.io
 cargo install canon-cli
 
-# Update to the latest version
-cargo install canon-cli --force
-
-# Install a specific version
-cargo install canon-cli@0.2.2
-```
-
-### Build from Source
-```bash
+# Build from source
 git clone https://github.com/canon-protocol/canon-cli.git
 cd canon-cli
 cargo build --release
 ./target/release/canon --version
 ```
 
+## Quick Start
+
+```bash
+# Initialize a new Canon project
+canon init
+
+# Install dependencies from canon.yml
+canon install
+
+# Add a new dependency
+canon add "profiles.org/author@1.0.0"
+
+# Clean cached specifications
+canon clean
+```
+
+## Commands
+
+### `canon init`
+Initialize a new Canon Protocol project. This command:
+- Downloads the `canon-protocol.org/project@1.0.0` type
+- Downloads the `canon-protocol.org/type@1.0.0` meta-type
+- Creates a `canon.yml` file with Canon Protocol format
+- Sets up `.canon/` directory for dependencies
+
+### `canon install`
+Install all dependencies listed in your `canon.yml` file. Specifications are fetched from `https://canon.canon-protocol.org/`.
+
+### `canon add <uri>`
+Add a new dependency to your project. Accepts URIs in the format:
+- `publisher/id@version` - Exact version
+- `publisher/id@^1.0.0` - Compatible versions (in schemas only)
+- `publisher/id@~1.0.0` - Patch versions (in schemas only)
+
+### `canon clean`
+Remove cached specifications:
+- `canon clean` - Remove `.canon/` (all cached dependencies)
+- `canon clean --all` - Remove entire `.canon/` (same as default)
+- `canon clean --purge` - Remove `.canon/` and `canon.yml` (complete uninstall)
+
+## Project Structure
+
+```
+my-project/
+├── canon.yml          # Your Canon specification
+└── .canon/            # Cached dependencies
+    └── publisher/
+        └── id/
+            └── version/
+                ├── canon.yml
+                ├── canon-manifest.yml
+                └── canon-signature.yml
+```
+
+## Example canon.yml
+
+```yaml
+canon: 1.0
+type: canon-protocol.org/project@1.0.0
+metadata:
+  id: my-project
+  version: 0.1.0
+  publisher: example.com
+  title: My Canon Project
+  description: A project using Canon Protocol
+
+dependencies:
+  - canon-protocol.org/type@1.0.0
+  - profiles.org/author@1.0.0
+```
+
+## Creating Types
+
+Types are created using the meta-type. Example:
+
+```yaml
+canon: 1.0
+type: canon-protocol.org/type@1.0.0
+metadata:
+  id: blog-post
+  version: 1.0.0
+  publisher: content.org
+  title: Blog Post Type
+
+schema:
+  title:
+    type: string
+    required: true
+    description: Post title
+  
+  author:
+    type: ref
+    uri: profiles.org/author@^1.0.0
+    required: true
+  
+  content:
+    type: string
+    required: true
+```
+
 ## Development
 
-- **For developers**: See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup and workflow
-- **For releases**: See [docs/RELEASE.md](docs/RELEASE.md) for the release process
+```bash
+# Build
+cargo build --workspace
+
+# Test
+cargo test --workspace
+
+# Format
+cargo fmt --all
+
+# Lint
+cargo clippy --workspace -- -D warnings
+```
+
+## Release Process
+
+See [`docs/RELEASE.md`](docs/RELEASE.md) for the automated release workflow using GitHub Actions.
 
 ## Contributing
 
-This is an early MVP release. Contributions and feedback are welcome via [GitHub Issues](https://github.com/canon-protocol/canon-cli/issues).
+Contributions are welcome! Please open issues and pull requests on [GitHub](https://github.com/canon-protocol/canon-cli).
+
+## License
+
+Apache-2.0
