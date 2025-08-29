@@ -228,7 +228,7 @@ pub async fn run_publish(
         println!("  Registry: {}", registry_url);
         println!("  Package: {}/{}@{}", publisher, id, version);
         println!("  From: {}", local_path.display());
-        if let Some(_) = auth_token {
+        if auth_token.is_some() {
             println!("  Auth: Token provided");
         }
         println!();
