@@ -1,6 +1,6 @@
 [package]
 name = "canon-cli"
-version = "0.2.10"
+version = "0.2.12"
 edition = "2021"
 authors = ["Paul Fryer <https://github.com/paulfryer>"]
 description = "Command-line tool for Canon protocol specifications"
@@ -23,7 +23,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Canon protocol types
-canon-protocol = { version = "0.1.7", path = "../canon-protocol" }
+canon-protocol = { version = "0.1.9", path = "../canon-protocol" }
 
 # CLI framework
 clap = { version = "4.4", features = ["derive", "env"] }

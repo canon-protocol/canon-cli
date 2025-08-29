@@ -1,3 +1,10 @@
+## [0.2.12] - 2025-08-29
+
+### 🐛 Bug Fixes
+
+- Fixed new registry pattern for folders and new line issues.
+- Fixed auth token code.
+
 ## [0.2.10] - 2025-08-29
 
 ### 🐛 Bug Fixes
