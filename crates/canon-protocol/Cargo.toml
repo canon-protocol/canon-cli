@@ -1,6 +1,6 @@
 [package]
 name = "canon-protocol"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["Paul Fryer <https://github.com/paulfryer>"]
 description = "Core types and validation for the Canon Protocol specification format"
