@@ -3,7 +3,7 @@ use serde_yaml::Value;
 use std::collections::HashMap;
 
 /// Canon Protocol Specification
-/// 
+///
 /// This represents ANY Canon document - whether it's a type definition,
 /// a project specification, or any other kind of Canon specification.
 /// The `type` field determines what kind of specification this is.
