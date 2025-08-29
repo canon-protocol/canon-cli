@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 
 /// Registry capability discovery response
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct RegistryCapabilities {
     #[serde(default)]
     name: String,
@@ -23,6 +24,7 @@ struct RegistryCapabilities {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct AuthenticationConfig {
     required: bool,
     #[serde(default)]
@@ -32,6 +34,7 @@ struct AuthenticationConfig {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct AuthEndpoints {
     #[serde(default)]
     token: Option<String>,
@@ -49,6 +52,7 @@ struct VerificationConfig {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DnsVerificationConfig {
     prefix: String,
     format: String,
@@ -57,12 +61,14 @@ struct DnsVerificationConfig {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct HttpsVerificationConfig {
     path: String,
     format: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct EndpointsConfig {
     discovery: String,
     packages: String,
@@ -94,8 +100,8 @@ pub async fn run_publish(
     }
 
     let yaml_content = fs::read_to_string(&canon_yml_path).map_err(CanonError::Io)?;
-    let spec: CanonSpecification = serde_yaml::from_str(&yaml_content)
-        .map_err(|e| CanonError::Command {
+    let spec: CanonSpecification =
+        serde_yaml::from_str(&yaml_content).map_err(|e| CanonError::Command {
             message: format!("Failed to parse canon.yml: {}", e),
         })?;
 
@@ -120,15 +126,12 @@ pub async fn run_publish(
     if !local_path.exists() {
         // For now, we'll just copy the current canon.yml to localhost
         // In the future, the build command will handle this
-        println!(
-            "{}",
-            style("Building canonical form...").dim()
-        );
-        
+        println!("{}", style("Building canonical form...").dim());
+
         fs::create_dir_all(&local_path).map_err(CanonError::Io)?;
         let dest_canon = local_path.join("canon.yml");
         fs::copy(&canon_yml_path, &dest_canon).map_err(CanonError::Io)?;
-        
+
         println!("{} Built to localhost", style("✓").green());
         println!();
     }
@@ -147,7 +150,7 @@ pub async fn run_publish(
 
     // Step 4: Check registry capabilities
     println!("{}", style("Checking registry capabilities...").dim());
-    
+
     let capabilities = match discover_registry_capabilities(&registry_url).await {
         Ok(caps) => caps,
         Err(_) => {
@@ -206,12 +209,15 @@ pub async fn run_publish(
     // Step 7: Verify domain ownership
     if !skip_verification {
         println!("{}", style("Verifying domain ownership...").dim());
-        
+
         if let Some(verification) = &capabilities.verification {
             verify_domain_ownership(publisher, &registry_url, verification).await?;
             println!("{} Domain verified", style("✓").green());
         } else {
-            println!("{}", style("⚠ Registry does not specify verification methods").yellow());
+            println!(
+                "{}",
+                style("⚠ Registry does not specify verification methods").yellow()
+            );
         }
         println!();
     }
@@ -229,7 +235,7 @@ pub async fn run_publish(
         println!("{}", style("No changes made (dry run)").dim());
     } else {
         println!("{}", style("Publishing package...").dim());
-        
+
         publish_to_registry(
             &registry_url,
             &capabilities.endpoints.publish.unwrap(),
@@ -238,8 +244,9 @@ pub async fn run_publish(
             version,
             &local_path,
             auth_token,
-        ).await?;
-        
+        )
+        .await?;
+
         println!();
         println!("{} Published successfully!", style("✓").green().bold());
         println!();
@@ -268,7 +275,7 @@ fn prompt_for_registry() -> CanonResult<String> {
 
 async fn discover_registry_capabilities(registry_url: &str) -> CanonResult<RegistryCapabilities> {
     let discovery_url = format!("{}/.well-known/canon-registry", registry_url);
-    
+
     let client = reqwest::Client::builder()
         .user_agent("canon-cli/0.2.10")
         .build()
@@ -286,17 +293,12 @@ async fn discover_registry_capabilities(registry_url: &str) -> CanonResult<Regis
 
     if !response.status().is_success() {
         return Err(CanonError::Network {
-            message: format!(
-                "Registry discovery failed (status: {})",
-                response.status()
-            ),
+            message: format!("Registry discovery failed (status: {})", response.status()),
         });
     }
 
-    let capabilities: RegistryCapabilities = response
-        .json()
-        .await
-        .map_err(|e| CanonError::Network {
+    let capabilities: RegistryCapabilities =
+        response.json().await.map_err(|e| CanonError::Network {
             message: format!("Failed to parse registry capabilities: {}", e),
         })?;
 
@@ -310,7 +312,7 @@ async fn verify_domain_ownership(
 ) -> CanonResult<()> {
     // For now, we'll implement basic DNS-TXT verification
     // In a real implementation, this would check actual DNS records
-    
+
     if verification.methods.contains(&"dns-txt".to_string()) {
         if let Some(dns_config) = &verification.dns_txt {
             // In production, this would:
@@ -318,16 +320,16 @@ async fn verify_domain_ownership(
             // 2. Ask user to add DNS TXT record
             // 3. Check DNS for the record
             // 4. Verify the token matches
-            
+
             println!("  Method: DNS TXT record");
             println!("  Record: {}.{}", dns_config.prefix, publisher);
-            
+
             // For now, we'll simulate success
             // Real implementation would use a DNS resolver library
             return Ok(());
         }
     }
-    
+
     if verification.methods.contains(&"https-file".to_string()) {
         if let Some(https_config) = &verification.https_file {
             // In production, this would:
@@ -335,15 +337,15 @@ async fn verify_domain_ownership(
             // 2. Ask user to place file at https://publisher/.well-known/canon-verify
             // 3. Fetch the file
             // 4. Verify the token matches
-            
+
             println!("  Method: HTTPS file");
             println!("  Path: https://{}{}", publisher, https_config.path);
-            
+
             // For now, we'll simulate success
             return Ok(());
         }
     }
-    
+
     Err(CanonError::Command {
         message: "No supported verification method available".to_string(),
     })
@@ -361,14 +363,14 @@ async fn publish_to_registry(
     // Read the canonical form
     let canon_yml_path = local_path.join("canon.yml");
     let canon_yml_content = fs::read_to_string(&canon_yml_path).map_err(CanonError::Io)?;
-    
+
     // Construct the publish URL
     let publish_url = if publish_endpoint.starts_with("http") {
         publish_endpoint.to_string()
     } else {
         format!("{}{}", registry_url, publish_endpoint)
     };
-    
+
     // Create the request
     let client = reqwest::Client::builder()
         .user_agent("canon-cli/0.2.10")
@@ -376,41 +378,38 @@ async fn publish_to_registry(
         .map_err(|e| CanonError::Network {
             message: format!("Failed to create HTTP client: {}", e),
         })?;
-    
+
     let mut request = client
         .post(&publish_url)
         .header("Content-Type", "application/x-yaml");
-    
+
     if let Some(token) = auth_token {
         request = request.header("Authorization", format!("Bearer {}", token));
     }
-    
+
     // Add package metadata headers
     request = request
         .header("X-Canon-Publisher", publisher)
         .header("X-Canon-Id", id)
         .header("X-Canon-Version", version);
-    
+
     // Send the request
-    let response = request
-        .body(canon_yml_content)
-        .send()
-        .await
-        .map_err(|e| CanonError::Network {
-            message: format!("Failed to publish package: {}", e),
-        })?;
-    
+    let response =
+        request
+            .body(canon_yml_content)
+            .send()
+            .await
+            .map_err(|e| CanonError::Network {
+                message: format!("Failed to publish package: {}", e),
+            })?;
+
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
         return Err(CanonError::Network {
-            message: format!(
-                "Publication failed (status: {}): {}",
-                status,
-                body
-            ),
+            message: format!("Publication failed (status: {}): {}", status, body),
         });
     }
-    
+
     Ok(())
 }

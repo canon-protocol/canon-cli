@@ -26,12 +26,11 @@ pub async fn run_init(force: bool, non_interactive: bool) -> CanonResult<()> {
     println!();
 
     // Get project metadata (interactive or defaults)
-    let (project_id, project_title, project_description, publisher, version) =
-        if non_interactive {
-            get_default_values(&current_dir)
-        } else {
-            get_interactive_values(&current_dir)?
-        };
+    let (project_id, project_title, project_description, publisher, version) = if non_interactive {
+        get_default_values(&current_dir)
+    } else {
+        get_interactive_values(&current_dir)?
+    };
 
     println!();
 

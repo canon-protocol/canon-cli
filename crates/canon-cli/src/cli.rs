@@ -99,15 +99,15 @@ pub enum Commands {
         /// Registry URL to publish to
         #[arg(long)]
         registry: Option<String>,
-        
+
         /// Authentication token for the registry
         #[arg(long, env = "CANON_AUTH_TOKEN")]
         token: Option<String>,
-        
+
         /// Dry run - validate but don't actually publish
         #[arg(long)]
         dry_run: bool,
-        
+
         /// Skip domain verification check
         #[arg(long)]
         skip_verification: bool,

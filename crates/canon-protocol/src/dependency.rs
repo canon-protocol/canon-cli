@@ -73,7 +73,7 @@ impl Dependency {
         }
         path
     }
-    
+
     /// Get the local storage path for this dependency (defaults to canon.canon-protocol.org)
     pub fn local_path(&self) -> PathBuf {
         self.local_path_with_registry("canon.canon-protocol.org")
@@ -93,7 +93,7 @@ impl Dependency {
         let canon_file = self.local_path_with_registry("localhost").join("canon.yml");
         canon_file.exists()
     }
-    
+
     /// Check if this dependency is already installed
     pub fn is_installed(&self) -> bool {
         let canon_file = self.local_path().join("canon.yml");
@@ -159,7 +159,10 @@ mod tests {
         };
 
         let path = dep.local_path();
-        assert_eq!(path, PathBuf::from(".canon/canon-protocol.org/type/1.0.0"));
+        assert_eq!(
+            path,
+            PathBuf::from(".canon/canon.canon-protocol.org/canon-protocol.org/type/1.0.0")
+        );
     }
 
     #[test]
